@@ -7,3 +7,6 @@ ENVIRONMENT = "development"
 
 [env.production]
 name = "cf-workers-app-production"
+
+[assets]
+directory = ".dist/client"

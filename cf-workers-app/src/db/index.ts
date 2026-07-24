@@ -2,7 +2,7 @@ import { neon } from '@neondatabase/serverless';
 
 let database: ReturnType<typeof neon> | null = null;
 
-export function getDb() {
+export function getDb(env: Env) {
   if (!database) {
     const connectionString = env.NEON_DATABASE_URL;
     if (!connectionString) {
@@ -13,13 +13,13 @@ export function getDb() {
   return database;
 }
 
-export async function query<T = unknown>(sql: string, params: unknown[] = []): Promise<T[]> {
-  const db = getDb();
+export async function query<T = unknown>(env: Env, sql: string, params: unknown[] = []): Promise<T[]> {
+  const db = getDb(env);
   const result = await db.execute(sql, params);
   return result.rows as T[];
 }
 
-export async function execute(sql: string, params: unknown[] = []): Promise<void> {
-  const db = getDb();
+export async function execute(env: Env, sql: string, params: unknown[] = []): Promise<void> {
+  const db = getDb(env);
   await db.execute(sql, params);
 }

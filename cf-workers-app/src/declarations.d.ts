@@ -9,4 +9,9 @@ declare module '@neondatabase/serverless' {
   };
 }
 
-declare const env: Record<string, string | undefined>;
+interface Env {
+  NEON_DATABASE_URL?: string;
+  ASSETS: {
+    fetch: (request: Request) => Promise<Response>;
+  };
+}
