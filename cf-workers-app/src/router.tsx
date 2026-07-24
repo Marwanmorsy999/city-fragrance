@@ -1,29 +1,26 @@
-import { createRouter } from '@tanstack/react-router';
-import { route } from '@tanstack/react-router';
-import { createFileRoute } from '@tanstack/react-router-devtools';
+import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import { App } from './App';
 import { Home } from './pages/Home';
 import { NotFound } from './pages/NotFound';
 
-const rootRoute = route({
-  id: '__root__',
+const rootRoute = createRootRoute({
   component: App,
 });
 
-const indexRoute = route({
+const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   component: Home,
 });
 
-const notFoundRoute = route({
+const notFoundRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '*',
   component: NotFound,
 });
 
 export const router = createRouter({
-  routes: [rootRoute, indexRoute, notFoundRoute],
+  routeTree: rootRoute.addChildren([indexRoute, notFoundRoute]),
 });
 
 declare module '@tanstack/react-router' {

@@ -1,13 +1,12 @@
 import { neon } from '@neondatabase/serverless';
-import { hyperdrive } from 'cloudflare:hyperdrive';
 
 let database: ReturnType<typeof neon> | null = null;
 
 export function getDb() {
   if (!database) {
-    const connectionString = hyperdrive.connectionString;
+    const connectionString = env.NEON_DATABASE_URL;
     if (!connectionString) {
-      throw new Error('Hyperdrive binding DATABASE is not configured');
+      throw new Error('NEON_DATABASE_URL is not configured');
     }
     database = neon(connectionString);
   }
