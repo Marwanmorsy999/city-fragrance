@@ -1,12 +1,18 @@
-declare module '*.css' {
-  const content: { [className: string]: string };
-  export default content;
+declare module 'lucide-react';
+
+declare module '*.jpg' {
+  const src: string;
+  export default src;
 }
 
-declare module '@neondatabase/serverless' {
-  export function neon(connectionString: string): {
-    execute: (sql: string, params?: unknown[]) => Promise<{ rows: unknown[] }>;
-  };
+declare module '*.png' {
+  const src: string;
+  export default src;
 }
 
-declare const env: Record<string, string | undefined>;
+declare module '*.jpeg' {
+  const src: string;
+  export default src;
+}
+
+declare module '*.css';
