@@ -1,20 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { MapPin, MessageCircle, ShoppingBag, Trash2, Plus, Minus, Sparkles, Menu, X, ChevronDown } from "lucide-react";
-
-function InstagramIcon({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-      <circle cx="12" cy="12" r="4"/>
-      <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none"/>
-    </svg>
-  );
-}
+import { useEffect, useMemo, useState } from "react";
+import { MessageCircle, ShoppingBag, Sparkles, Menu, X, ChevronDown } from "lucide-react";
 import heroImg from "@/assets/images/hero-fragrance.jpg";
 import storeImg from "@/assets/images/store-interior.jpg";
-import { PRODUCTS, FILTERS, type Category, type Product } from "@/lib/products";
-import { CartProvider, useCart, buildWhatsAppUrl, cartToWhatsAppMessage } from "@/lib/cart";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { PRODUCTS, type Category, type Product } from "@/lib/products";
+import { CartProvider, useCart, buildWhatsAppUrl } from "@/lib/cart";
+import { LanguageProvider, useLang } from "@/lib/language";
+import { t as tx } from "@/lib/translations";
 
 function useIsMobile() {
   const [mobile, setMobile] = useState(window.innerWidth <= 768);
@@ -26,172 +17,181 @@ function useIsMobile() {
   return mobile;
 }
 
-const ADDRESS_AR = "بنها الفلل، شارع الحرمين، أمام صيدلية العماوي";
 const INSTAGRAM = "https://instagram.com/city_fragrance_";
 
-type Page = "home" | "shop" | "about" | "guide" | "faq";
+type Page = "home" | "shop" | "about" | "guide" | "faq" | "product";
 
 export default function App() {
   const [page, setPage] = useState<Page>("home");
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const on = () => setScrolled(window.scrollY > 20);
-    on();
-    window.addEventListener("scroll", on, { passive: true });
-    return () => window.removeEventListener("scroll", on);
-  }, []);
-
-  const navigate = (newPage: Page) => {
-    setPage(newPage);
-    window.scrollTo(0, 0);
-  };
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const navigate = (p: Page) => { setPage(p); window.scrollTo(0, 0); };
 
   return (
     <CartProvider>
-      <div style={{ minHeight: "100vh", overflowX: "hidden", background: "#0a0a0f", color: "#f5f0e8" }}>
-        <Nav navigate={navigate} currentPage={page} scrolled={scrolled} />
-        {page === "home" && <HomePage navigate={navigate} />}
-        {page === "shop" && <ShopPage />}
-        {page === "about" && <AboutPage />}
-        {page === "guide" && <GuidePage />}
-        {page === "faq" && <FAQPage />}
-        <Footer navigate={navigate} />
-        <FloatingWA />
-      </div>
+      <LanguageProvider>
+        <div style={{ minHeight: "100vh", background: "#0a0a0f", color: "#ffffff", fontFamily: "'Inter', sans-serif" }}>
+          <Nav navigate={navigate} currentPage={page} />
+          {page === "home" && <HomePage navigate={navigate} setSelectedProduct={setSelectedProduct} />}
+          {page === "shop" && <ShopPage navigate={navigate} setSelectedProduct={setSelectedProduct} />}
+          {page === "about" && <AboutPage />}
+          {page === "guide" && <GuidePage />}
+          {page === "faq" && <FAQPage />}
+          {page === "product" && selectedProduct && <ProductDetailPage product={selectedProduct} navigate={navigate} />}
+          <Footer navigate={navigate} />
+          <FloatingWA />
+        </div>
+      </LanguageProvider>
     </CartProvider>
   );
 }
 
-function Nav({ navigate, currentPage, scrolled }: { navigate: (p: Page) => void; currentPage: Page; scrolled: boolean }) {
+function InstagramIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+      <circle cx="12" cy="12" r="4"/>
+      <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none"/>
+    </svg>
+  );
+}
+
+function Nav({ navigate, currentPage }: { navigate: (p: Page) => void; currentPage: Page }) {
+  const { lang, setLang } = useLang();
   const { count } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
   const isMobile = useIsMobile();
-  const navLinks: Array<[Page, string, string]> = [
-    ["shop", "Shop", "المتجر"],
-    ["about", "About", "عنا"],
-    ["guide", "Guide", "دليل"],
-    ["faq", "FAQ", "الأسئلة الشائعة"],
-  ];
+  const s = tx[lang];
 
-  const ContactLink = () => (
-    <a
-      href={buildWhatsAppUrl("مرحبا 👋")}
-      target="_blank"
-      rel="noreferrer"
-      style={{
-        display: isMobile ? "flex" : "flex",
-        alignItems: "center",
-        gap: 8,
-        fontSize: 14,
-        color: "#888899",
-        textDecoration: "none",
-        cursor: "pointer",
-      }}
-    >
-      <MessageCircle size={16} />
-      <span>{isMobile ? "Contact" : "اتصل"}</span>
-    </a>
-  );
+  const navLinks: Array<[Page, string]> = [
+    ["shop", s.shop],
+    ["about", s.about],
+    ["guide", s.guide],
+    ["faq", s.faq],
+  ];
 
   return (
     <header style={{
-      position: "fixed", top: 0, left: 0, right: 0, zIndex: 40, transition: "all 0.3s",
-      background: scrolled ? "rgba(10,10,15,0.85)" : "transparent",
-      backdropFilter: scrolled ? "blur(12px)" : "none",
-      borderBottom: scrolled ? "1px solid rgba(42,42,58,0.6)" : "none",
+      position: "fixed", top: 0, left: 0, right: 0, zIndex: 40,
+      background: "rgba(10,10,15,0.85)",
+      borderBottom: "1px solid rgba(42,42,58,0.6)",
     }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px" }}>
-        <a href="#top" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 12 }}>
-          <div>
-            <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 18, color: "#f5f0e8" }}>City Fragrance</div>
-            <div style={{ fontFamily: "'Tajawal', sans-serif", fontSize: 11, color: "#c9a84c", letterSpacing: "0.1em", direction: "rtl" }}>سيتي فراجرانس</div>
-          </div>
-        </a>
-        <nav style={{ display: isMobile ? "none" : "flex", alignItems: "center", gap: 32, fontSize: 14 }}>
-          {navLinks.map(([p, l, lAr]) => (
+        <button onClick={() => navigate("home")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+          <span style={{ fontWeight: 700, fontSize: 18, color: "#ffffff" }}>City Fragrance</span>
+        </button>
+        <nav style={{ display: isMobile ? "none" : "flex", alignItems: "center", gap: 28, fontSize: 14 }}>
+          {navLinks.map(([p, label]) => (
             <button
               key={p}
               onClick={() => navigate(p)}
               style={{
                 color: currentPage === p ? "#c9a84c" : "#888899",
-                textDecoration: "none",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-                fontSize: 14,
-                transition: "color 0.2s",
+                background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 14,
               }}
             >
-              {isMobile ? lAr : l}
+              {label}
             </button>
           ))}
-          <ContactLink />
-        </nav>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <CartSheet trigger={
-            <button style={{
+          <a
+            href={buildWhatsAppUrl(lang === "en" ? "Hello 👋" : "السلام عليكم 👋")}
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: "#888899", textDecoration: "none", fontSize: 14 }}
+          >
+            {s.contact}
+          </a>
+          <button
+            onClick={() => setLang(lang === "en" ? "ar" : "en")}
+            style={{
+              border: "1px solid #2a2a3a", borderRadius: 8, padding: "6px 12px",
+              fontSize: 13, background: "transparent", color: "#888899", cursor: "pointer",
+            }}
+          >
+            {lang === "en" ? "ع" : "EN"}
+          </button>
+          <button
+            onClick={() => navigate("shop")}
+            style={{
               position: "relative", display: "flex", alignItems: "center", gap: 8,
-              borderRadius: 999, border: "1px solid rgba(201,168,76,0.4)", padding: "8px 16px",
-              fontSize: 14, color: "#f5f0e8", background: "transparent", cursor: "pointer", transition: "all 0.2s",
-            }}>
-              <ShoppingBag size={16} />
-              <span>Cart</span>
-              {count > 0 && (
-                <span style={{
-                  position: "absolute", top: -4, right: -4, width: 20, height: 20, borderRadius: "50%",
-                  background: "#c9a84c", color: "#0a0a0f", fontSize: 11, fontWeight: 600,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>{count}</span>
-              )}
-            </button>
-          } />
-          {isMobile && (
-            <button onClick={() => setMenuOpen(o => !o)} aria-label="Toggle menu" style={{
-              display: "flex", alignItems: "center", justifyContent: "center",
-              background: "none", border: "none", cursor: "pointer",
-              color: "#f5f0e8", padding: 4,
-            }}>
-              {menuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          )}
+              border: "1px solid #2a2a3a", borderRadius: 8, padding: "8px 14px",
+              fontSize: 13, color: "#ffffff", background: "transparent", cursor: "pointer",
+            }}
+          >
+            <ShoppingBag size={16} />
+            <span>{s.cart}</span>
+            {count > 0 && (
+              <span style={{
+                position: "absolute", top: -4, right: -4, width: 20, height: 20, borderRadius: "50%",
+                background: "#c9a84c", color: "#0a0a0f", fontSize: 11, fontWeight: 600,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>{count}</span>
+            )}
+          </button>
+        </nav>
+        <div style={{ display: isMobile ? "flex" : "none", alignItems: "center", gap: 8 }}>
+          <button
+            onClick={() => navigate("shop")}
+            style={{
+              position: "relative", display: "flex", alignItems: "center", gap: 6,
+              border: "1px solid #2a2a3a", borderRadius: 8, padding: "8px 12px",
+              fontSize: 12, color: "#ffffff", background: "transparent", cursor: "pointer",
+            }}
+          >
+            <ShoppingBag size={16} />
+            {count > 0 && (
+              <span style={{
+                position: "absolute", top: -4, right: -4, width: 18, height: 18, borderRadius: "50%",
+                background: "#c9a84c", color: "#0a0a0f", fontSize: 10, fontWeight: 600,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>{count}</span>
+            )}
+          </button>
+          <button onClick={() => setMenuOpen(o => !o)} aria-label="Toggle menu" style={{
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "none", border: "none", cursor: "pointer", color: "#ffffff", padding: 4,
+          }}>
+            {menuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
       </div>
       {isMobile && menuOpen && (
         <div style={{
           position: "absolute", top: "100%", left: 0, right: 0, zIndex: 39,
-          background: "rgba(10,10,15,0.97)", backdropFilter: "blur(16px)",
+          background: "rgba(10,10,15,0.97)",
           display: "flex", flexDirection: "column", padding: "8px 20px", gap: 4,
         }}>
-          {navLinks.map(([p, l, lAr]) => (
+          {navLinks.map(([p, label]) => (
             <button
               key={p}
               onClick={() => { setMenuOpen(false); navigate(p); }}
               style={{
                 display: "flex", alignItems: "center", minHeight: 48, padding: "12px 16px",
-                fontSize: 16, color: "#f5f0e8", textDecoration: "none", borderRadius: 12,
-                transition: "background 0.2s", fontFamily: "'Cormorant Garamond', Georgia, serif",
-                background: currentPage === p ? "rgba(201,168,76,0.1)" : "transparent",
+                fontSize: 16, color: currentPage === p ? "#c9a84c" : "#ffffff",
+                background: "none", border: "none", cursor: "pointer", textAlign: "left",
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = "rgba(201,168,76,0.1)")}
-              onMouseLeave={e => (e.currentTarget.style.background = currentPage === p ? "rgba(201,168,76,0.1)" : "transparent")}
             >
-              {lAr}
+              {label}
             </button>
           ))}
-          <button
-            onClick={() => { setMenuOpen(false); }}
+          <a
+            href={buildWhatsAppUrl(lang === "en" ? "Hello 👋" : "السلام عليكم 👋")}
+            target="_blank"
+            rel="noreferrer"
             style={{
-              display: "flex", alignItems: "center", minHeight: 48, padding: "12px 16px",
-              fontSize: 16, color: "#f5f0e8", textDecoration: "none", borderRadius: 12,
-              fontFamily: "'Cormorant Garamond', Georgia, serif",
+              display: "flex", alignItems: "center", gap: 8, textDecoration: "none",
+              minHeight: 48, padding: "12px 16px", fontSize: 16, color: "#ffffff",
             }}
           >
-            <a href={buildWhatsAppUrl("مرحبا 👋")} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", width: "100%" }}>
-              <MessageCircle size={16} />
-              <span>اتصل</span>
-            </a>
+            <MessageCircle size={16} /> {s.contact}
+          </a>
+          <button
+            onClick={() => { setLang(lang === "en" ? "ar" : "en"); setMenuOpen(false); }}
+            style={{
+              display: "flex", alignItems: "center", minHeight: 48, padding: "12px 16px",
+              fontSize: 16, color: "#ffffff", background: "none", border: "none", cursor: "pointer", textAlign: "left",
+            }}
+          >
+            {lang === "en" ? "عربي" : "English"}
           </button>
         </div>
       )}
@@ -199,44 +199,47 @@ function Nav({ navigate, currentPage, scrolled }: { navigate: (p: Page) => void;
   );
 }
 
+function HomePage({ navigate, setSelectedProduct }: { navigate: (p: Page) => void; setSelectedProduct: (p: Product) => void }) {
+  return (
+    <>
+      <Hero navigate={navigate} />
+      <FeaturedProducts navigate={navigate} setSelectedProduct={setSelectedProduct} />
+      <AuthenticitySection />
+      <OrderWaysSection />
+    </>
+  );
+}
+
 function Hero({ navigate }: { navigate: (p: Page) => void }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const on = () => {
-      if (!ref.current) return;
-      const y = window.scrollY;
-      ref.current.style.transform = `translate3d(0,${y*0.25}px,0) scale(${1+y*0.0004})`;
-    };
-    window.addEventListener("scroll", on, { passive: true });
-    return () => window.removeEventListener("scroll", on);
-  }, []);
+  const { lang } = useLang();
+  const s = tx[lang];
+  const bodyStyle = lang === "ar" ? { fontFamily: "'Tajawal', sans-serif", direction: "rtl" as const } : {};
+
   return (
     <section id="top" style={{ position: "relative", minHeight: "100vh", maxHeight: "700px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "#050508" }}>
-      <div ref={ref} style={{ position: "absolute", inset: 0, willChange: "transform" }}>
-        <img src={heroImg} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.55 }} />
+      <div style={{ position: "absolute", inset: 0 }}>
+        <img src={heroImg} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.75 }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom,rgba(10,10,15,.6),rgba(10,10,15,.3),#0a0a0f)" }} />
       </div>
-      <div style={{ position: "relative", zIndex: 10, maxWidth: 900, padding: "0 24px", textAlign: "center", animation: "reveal 0.8s ease both" }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, borderRadius: 999, border: "1px solid rgba(201,168,76,.4)", background: "rgba(10,10,15,.4)", padding: "6px 16px", backdropFilter: "blur(8px)", marginBottom: 24 }}>
-          <MapPin size={14} color="#c9a84c" />
-          <span style={{ fontFamily: "'Tajawal',sans-serif", fontSize: 12, color: "rgba(245,240,232,.9)", direction: "rtl" }}>{ADDRESS_AR}</span>
-        </div>
-        <h1 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontSize: "clamp(3rem,10vw,6rem)", lineHeight: .95, color: "#f5f0e8" }}>
-          City <em style={{ color: "#c9a84c" }}>Fragrance</em>
+      <div style={{ position: "relative", zIndex: 10, maxWidth: 900, padding: "0 24px", textAlign: "center", ...bodyStyle }}>
+        <h1 style={{ fontWeight: 700, fontSize: "clamp(2.5rem,6vw,4rem)", color: "#ffffff", margin: 0 }}>
+          City Fragrance
         </h1>
-        <div style={{ fontFamily: "'Tajawal',sans-serif", marginTop: 16, fontSize: "clamp(1.8rem,6vw,3.5rem)", fontWeight: 700, color: "#f5f0e8", direction: "rtl" }}>
-          سيتي <span style={{ color: "#c9a84c" }}>فراجرانس</span>
-        </div>
-        <p style={{ fontFamily: "'Tajawal',sans-serif", marginTop: 32, fontSize: "clamp(1rem,3vw,1.25rem)", color: "rgba(245,240,232,.8)", direction: "rtl" }}>
-          مش بيبع عطر.. بيبيع <span style={{ color: "#c9a84c" }}>قلب العطر</span>
+        <p style={{ fontWeight: 400, fontSize: 18, color: "#888899", marginTop: 16 }}>
+          {s.heroTagline}
         </p>
         <div style={{ marginTop: 40, display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center", justifyContent: "center" }}>
-          <button onClick={() => navigate("shop")} style={{ display: "inline-flex", alignItems: "center", gap: 12, borderRadius: 999, padding: "14px 32px", fontSize: 15, fontWeight: 600, color: "#0a0a0f", textDecoration: "none", background: "linear-gradient(135deg,#c9a84c,#e8cc80,#c9a84c)", boxShadow: "0 0 30px rgba(201,168,76,.3)" }}>
-            <span style={{ fontFamily: "'Tajawal',sans-serif" }}>اعمل اوردرك دلوقتي</span>
-            <span style={{ width: 1, height: 16, background: "rgba(10,10,15,.3)" }} />
-            <span>Shop Now</span>
+          <button onClick={() => navigate("shop")} style={{
+            background: "#c9a84c", color: "#000", borderRadius: 8, padding: "12px 24px",
+            fontSize: 15, fontWeight: 600, border: "none", cursor: "pointer",
+          }}>
+            {s.shopNow}
           </button>
-          <a href={buildWhatsAppUrl("مساء الخير 👋 حابب اسأل عن العطور المتاحة")} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, borderRadius: 999, border: "1px solid rgba(245,240,232,.3)", padding: "12px 24px", fontSize: 14, color: "#f5f0e8", textDecoration: "none" }}>
+          <a href={buildWhatsAppUrl(lang === "en" ? "Hello 👋 I'd like to know more" : "السلام عليكم 👋 حابب اسأل عن العطور")} target="_blank" rel="noreferrer" style={{
+            display: "inline-flex", alignItems: "center", gap: 8,
+            border: "1px solid #2a2a3a", borderRadius: 8, padding: "12px 24px",
+            fontSize: 14, color: "#ffffff", textDecoration: "none",
+          }}>
             <MessageCircle size={16} /> WhatsApp
           </a>
         </div>
@@ -245,23 +248,26 @@ function Hero({ navigate }: { navigate: (p: Page) => void }) {
   );
 }
 
-function FeaturedProducts({ navigate }: { navigate: (p: Page) => void }) {
+function FeaturedProducts({ navigate, setSelectedProduct }: { navigate: (p: Page) => void; setSelectedProduct: (p: Product) => void }) {
+  const { lang } = useLang();
+  const s = tx[lang];
   const featured = PRODUCTS.slice(0, 4);
   const isMobile = useIsMobile();
+
   return (
     <section style={{ maxWidth: 1280, margin: "0 auto", padding: "64px 20px" }}>
-      <SectionHeader kicker="Featured" en="Featured Collection" ar="مجموعة مختارة" />
-      <div style={{ marginTop: 56, display: "grid", gap: isMobile ? 12 : 24, gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)" }}>
-        {featured.map((p, i) => <ProductCard key={p.id} p={p} index={i} />)}
+      <h2 style={{ fontWeight: 600, fontSize: 28, textAlign: "center", color: "#ffffff", margin: 0 }}>
+        Featured Collection
+      </h2>
+      <div style={{ marginTop: 40, display: "grid", gap: 16, gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)" }}>
+        {featured.map(p => <ProductCard key={p.id} p={p} setSelectedProduct={setSelectedProduct} navigate={navigate} />)}
       </div>
       <div style={{ marginTop: 40, textAlign: "center" }}>
         <button onClick={() => navigate("shop")} style={{
-          display: "inline-flex", alignItems: "center", gap: 8,
-          borderRadius: 999, border: "1px solid rgba(201,168,76,.4)",
-          padding: "10px 24px", fontSize: 14, color: "#c9a84c",
-          background: "transparent", cursor: "pointer", transition: "all 0.2s"
+          border: "1px solid #2a2a3a", borderRadius: 8, padding: "10px 24px",
+          fontSize: 14, color: "#ffffff", background: "transparent", cursor: "pointer",
         }}>
-          View All →
+          {s.viewAll}
         </button>
       </div>
     </section>
@@ -269,150 +275,280 @@ function FeaturedProducts({ navigate }: { navigate: (p: Page) => void }) {
 }
 
 function AuthenticitySection() {
+  const { lang } = useLang();
+  const s = tx[lang];
+  const bodyStyle = lang === "ar" ? { fontFamily: "'Tajawal', sans-serif", direction: "rtl" as const } : {};
+
   return (
     <section style={{ maxWidth: 1280, margin: "0 auto", padding: "64px 20px", textAlign: "center" }}>
-      <SectionHeader kicker="Authenticity" en="Guaranteed Original" ar="أصل أصلي" />
-      <p style={{ fontFamily: "'Tajawal',sans-serif", marginTop: 24, fontSize: 18, color: "#888899", maxWidth: 600, margin: "24px auto 0" }}>
-        كل العطور المباعة أصلية وموثوقة. نحن نتعامل مباشرة مع الموردين الأصليين لضمان الأصالة والجودة.
-      </p>
-    </section>
-  );
-}
-
-function HomePage({ navigate }: { navigate: (p: Page) => void }) {
-  return (
-    <>
-      <Hero navigate={navigate} />
-      <FeaturedProducts navigate={navigate} />
-      <AuthenticitySection />
-      <OrderWASection />
-    </>
-  );
-}
-
-function OrderWASection() {
-  return (
-    <section style={{ maxWidth: 900, margin: "0 auto", padding: "64px 20px", textAlign: "center" }}>
-      <SectionHeader kicker="Order" en="Two Ways to Order" ar="طريقتين للطلب" />
-      <div style={{ marginTop: 48, display: "grid", gap: 24, gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))" }}>
-        <a href={buildWhatsAppUrl("السلام عليكم 👋 حابب أعمل أوردر")} target="_blank" rel="noreferrer" style={{ display: "block", borderRadius: 24, padding: 40, textAlign: "center", background: "linear-gradient(135deg,#c9a84c,#e8cc80,#c9a84c)", color: "#0a0a0f", textDecoration: "none", boxShadow: "0 0 30px rgba(201,168,76,.3)" }}>
-          <MessageCircle size={40} style={{ margin: "0 auto" }} />
-          <h3 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", marginTop: 16, fontSize: 26 }}>Order via WhatsApp</h3>
-          <p style={{ fontFamily: "'Tajawal',sans-serif", marginTop: 8, fontSize: 16, fontWeight: 600 }}>اطلب الآن عبر الواتساب</p>
-          <p style={{ marginTop: 12, fontSize: 13, opacity: .85 }}>Fastest • Personal • 24/7</p>
-        </a>
-        <button onClick={() => window.scrollTo(0, 0)} style={{
-          display: "block", borderRadius: 24, border: "1px solid #2a2a3a", padding: 40,
-          textAlign: "center", background: "#111118", textDecoration: "none",
-          cursor: "pointer", fontFamily: "'Cormorant Garamond',Georgia,serif",
-        }}>
-          <ShoppingBag size={40} style={{ margin: "0 auto", color: "#c9a84c" }} />
-          <h3 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", marginTop: 16, fontSize: 26, color: "#f5f0e8" }}>Order on the site</h3>
-          <p style={{ fontFamily: "'Tajawal',sans-serif", marginTop: 8, fontSize: 16, color: "#c9a84c" }}>أو اعمل اوردر عن طريق الويبسايت</p>
-          <p style={{ marginTop: 12, fontSize: 13, color: "#888899" }}>Browse • Add to cart • Checkout on WhatsApp</p>
-        </button>
+      <h2 style={{ fontWeight: 600, fontSize: 28, color: "#ffffff", margin: 0 }}>
+        {s.authHeading}
+      </h2>
+      <div style={{
+        marginTop: 32, background: "#111118", border: "1px solid #2a2a3a",
+        borderRadius: 12, padding: 40,
+      }}>
+        <p style={{ fontSize: 15, color: "#888899", lineHeight: 1.8, margin: 0, ...bodyStyle }}>
+          {s.authBody}
+        </p>
+        <div style={{ marginTop: 32, display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center", ...bodyStyle }}>
+          <div style={{ border: "1px solid #2a2a3a", borderRadius: 8, padding: "12px 20px" }}>
+            🔒 {s.badge1}
+          </div>
+          <div style={{ border: "1px solid #2a2a3a", borderRadius: 8, padding: "12px 20px" }}>
+            ✅ {s.badge2}
+          </div>
+          <div style={{ border: "1px solid #2a2a3a", borderRadius: 8, padding: "12px 20px" }}>
+            🔄 {s.badge3}
+          </div>
+        </div>
       </div>
     </section>
   );
 }
 
-function ShopPage() {
+function OrderWaysSection() {
+  const { lang } = useLang();
+  const s = tx[lang];
+
+  return (
+    <section style={{ maxWidth: 1280, margin: "0 auto", padding: "64px 20px", textAlign: "center" }}>
+      <h2 style={{ fontWeight: 600, fontSize: 28, color: "#ffffff", margin: 0 }}>
+        {s.orderHeading}
+      </h2>
+      <div style={{ marginTop: 40, display: "grid", gap: 24, gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))" }}>
+        <a href={buildWhatsAppUrl(lang === "en" ? "Hello 👋 I'd like to place an order" : "السلام عليكم 👋 حابب أعمل أوردر")} target="_blank" rel="noreferrer" style={{
+          display: "block", borderRadius: 12, padding: 40, textAlign: "center",
+          background: "#c9a84c", color: "#000", textDecoration: "none",
+        }}>
+          <MessageCircle size={40} style={{ margin: "0 auto" }} />
+          <h3 style={{ marginTop: 16, fontSize: 22, fontWeight: 600 }}>{s.orderWA}</h3>
+          <p style={{ marginTop: 8, fontSize: 13, opacity: 0.85 }}>{s.orderWASub}</p>
+        </a>
+        <div style={{
+          borderRadius: 12, border: "1px solid #2a2a3a", padding: 40,
+          textAlign: "center", background: "#111118",
+        }}>
+          <ShoppingBag size={40} style={{ margin: "0 auto", color: "#c9a84c" }} />
+          <h3 style={{ marginTop: 16, fontSize: 22, fontWeight: 600, color: "#ffffff" }}>{s.orderSite}</h3>
+          <p style={{ marginTop: 8, fontSize: 13, color: "#888899" }}>{s.orderSiteSub}</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ShopPage({ navigate, setSelectedProduct }: { navigate: (p: Page) => void; setSelectedProduct: (p: Product) => void }) {
+  const { lang } = useLang();
+  const s = tx[lang];
   const [filter, setFilter] = useState<Category | "all">("all");
   const isMobile = useIsMobile();
   const list = useMemo(() => filter === "all" ? PRODUCTS : PRODUCTS.filter(p => p.categories.includes(filter)), [filter]);
+  const bodyStyle = lang === "ar" ? { fontFamily: "'Tajawal', sans-serif", direction: "rtl" as const } : {};
+
+  const filterBtns: Array<{ id: Category | "all"; label: string }> = [
+    { id: "all", label: s.filterAll },
+    { id: "men", label: s.filterMen },
+    { id: "women", label: s.filterWomen },
+    { id: "unisex", label: s.filterUnisex },
+    { id: "oud", label: s.filterOud },
+    { id: "summer", label: s.filterSummer },
+  ];
+
   return (
     <section style={{ maxWidth: 1280, margin: "0 auto", padding: "64px 20px" }}>
-      <SectionHeader kicker="Collection" en="Featured Fragrances" ar="أبرز العطور" />
-      <div style={{ marginTop: 40, display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8 }}>
-        {FILTERS.map(f => (
-          <button key={f.id} onClick={() => setFilter(f.id)} style={{ borderRadius: 999, border: `1px solid ${filter===f.id?"#c9a84c":"#2a2a3a"}`, padding: "8px 16px", fontSize: 13, cursor: "pointer", transition: "all 0.2s", background: filter===f.id?"#c9a84c":"transparent", color: filter===f.id?"#0a0a0f":"#888899" }}>
-            {f.label} <span style={{ fontFamily: "'Tajawal',sans-serif", opacity: .7 }}>· {f.labelAr}</span>
+      <h2 style={{ fontWeight: 600, fontSize: 28, textAlign: "center", color: "#ffffff", margin: 0, ...bodyStyle }}>
+        {s.shopHeading}
+      </h2>
+      <div style={{ marginTop: 32, display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, ...bodyStyle }}>
+        {filterBtns.map(f => (
+          <button key={f.id} onClick={() => setFilter(f.id)} style={{
+            borderRadius: 8, border: `1px solid ${filter===f.id?"#c9a84c":"#2a2a3a"}`,
+            padding: "8px 16px", fontSize: 13, cursor: "pointer",
+            background: filter===f.id?"#c9a84c":"transparent",
+            color: filter===f.id?"#000":"#888899",
+          }}>
+            {f.label}
           </button>
         ))}
       </div>
-      <div style={{ marginTop: 56, display: "grid", gap: isMobile ? 12 : 24, gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)" }}>
-        {list.map((p, i) => <ProductCard key={p.id} p={p} index={i} />)}
+      <div style={{ marginTop: 40, display: "grid", gap: 16, gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)" }}>
+        {list.map(p => <ProductCard key={p.id} p={p} setSelectedProduct={setSelectedProduct} navigate={navigate} />)}
       </div>
     </section>
   );
 }
 
-function ProductCard({ p, index }: { p: Product; index: number }) {
+function ProductCard({ p, setSelectedProduct, navigate }: { p: Product; setSelectedProduct: (p: Product) => void; navigate: (p: Page) => void }) {
+  const { lang } = useLang();
   const { add } = useCart();
-  const [visible, setVisible] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
-  useEffect(() => {
-    if (!ref.current) return;
-    const io = new IntersectionObserver(([e]) => e.isIntersecting && setVisible(true), { threshold: .15 });
-    io.observe(ref.current); return () => io.disconnect();
-  }, []);
-  const price = p.discount ? Math.round(p.price * .9) : p.price;
+  const price = p.discount ? Math.round(p.price * 0.9) : p.price;
+  const s = tx[lang];
+
+  const handleCardClick = () => {
+    setSelectedProduct(p);
+    navigate("product");
+  };
+
   return (
-    <div ref={ref} style={{ position: "relative", overflow: "hidden", borderRadius: 16, border: "1px solid #2a2a3a", background: "#111118", boxShadow: "0 4px 24px rgba(0,0,0,.4)", transition: "all 0.7s", transitionDelay: `${(index%4)*80}ms`, transform: visible?"translateY(0)":"translateY(24px)", opacity: visible?1:0 }}>
-      {p.discount && <div style={{ position: "absolute", top: 12, right: 12, zIndex: 10, borderRadius: 999, padding: "4px 10px", fontSize: 11, fontWeight: 600, color: "#0a0a0f", background: "linear-gradient(135deg,#c9a84c,#e8cc80,#c9a84c)" }}>−10% OFF</div>}
-      <div style={{ aspectRatio: "3/4", overflow: "hidden" }}>
+    <div style={{
+      background: "#111118", border: "1px solid #2a2a3a", borderRadius: 12, cursor: "pointer", overflow: "hidden",
+    }}>
+      <div onClick={handleCardClick} style={{ aspectRatio: "3/4" }}>
         <img src={p.image} alt={p.name} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
       </div>
-      <div style={{ padding: isMobile ? 12 : 20, display: "flex", flexDirection: "column", gap: 12 }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-          <div>
-            <div style={{ fontSize: isMobile ? 9 : 10, textTransform: "uppercase", letterSpacing: ".15em", color: "#888899" }}>{p.brand}</div>
-            <h3 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontSize: isMobile ? 16 : 20, color: "#f5f0e8" }}>{p.name}</h3>
-            <div style={{ fontFamily: "'Tajawal',sans-serif", fontSize: isMobile ? 11 : 13, color: "rgba(201,168,76,.9)", direction: "rtl" }}>{p.nameAr}</div>
-          </div>
-          <div style={{ textAlign: "right", flexShrink: 0 }}>
-            {p.discount && <div style={{ fontSize: 11, color: "#888899", textDecoration: "line-through" }}>{p.price} EGP</div>}
-            <div style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontSize: isMobile ? 15 : 18, color: "#c9a84c" }}>{price} <span style={{ fontSize: 11 }}>EGP</span></div>
-          </div>
+      <div onClick={handleCardClick} style={{ padding: isMobile ? 12 : 16, display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ fontSize: 10, textTransform: "uppercase", color: "#888899" }}>{p.brand}</div>
+        <div style={{ fontSize: 16, fontWeight: 600, color: "#ffffff" }}>
+          {lang === "ar" ? p.nameAr : p.name}
         </div>
-        <p style={{ fontSize: isMobile ? 9 : 12, color: "#888899" }}>{p.note}</p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: isMobile ? 9 : 10, color: "#888899" }}>
-            <span style={{ width: 36, fontFamily: "'Tajawal',sans-serif", direction: "rtl", textAlign: "right" }}>أعلى</span>
-            <span style={{ flex: 1 }}>{p.notes.top}</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: isMobile ? 9 : 10, color: "#888899" }}>
-            <span style={{ width: 36, fontFamily: "'Tajawal',sans-serif", direction: "rtl", textAlign: "right" }}>قلب</span>
-            <span style={{ flex: 1 }}>{p.notes.heart}</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: isMobile ? 9 : 10, color: "#888899" }}>
-            <span style={{ width: 36, fontFamily: "'Tajawal',sans-serif", direction: "rtl", textAlign: "right" }}>قاعدة</span>
-            <span style={{ flex: 1 }}>{p.notes.base}</span>
-          </div>
+        <div style={{ fontSize: 15, color: "#c9a84c" }}>
+          {price} <span style={{ fontSize: 11 }}>EGP</span>
+          {p.discount && <span style={{ fontSize: 11, color: "#888899", textDecoration: "line-through", marginLeft: 8 }}>{p.price} EGP</span>}
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => add({ id: p.id, name: p.name, nameAr: p.nameAr, price, image: p.image })} style={{ flex: 1, borderRadius: 999, border: "1px solid rgba(201,168,76,.4)", padding: isMobile ? 6 : 8, fontSize: 12, fontWeight: 500, color: "#f5f0e8", background: "transparent", cursor: "pointer", transition: "all 0.2s" }}>Add to Cart</button>
-          <a href={buildWhatsAppUrl(`عايز أطلب ${p.nameAr} (${p.name}) — ${price} EGP`)} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 999, padding: isMobile ? 6 : 8, color: "#0a0a0f", background: "linear-gradient(135deg,#c9a84c,#e8cc80,#c9a84c)", textDecoration: "none" }}>
-            <MessageCircle size={16} />
-          </a>
+        <div style={{ fontSize: 11, color: "#888899" }}>
+          {lang === "ar" ? p.noteAr : p.note}
         </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, fontSize: 10, color: "#888899" }}>
+          <div>{s.topNote}: {p.notes.top}</div>
+          <div>{s.heartNote}: {p.notes.heart}</div>
+          <div>{s.baseNote}: {p.notes.base}</div>
+        </div>
+      </div>
+      <div style={{ padding: isMobile ? "0 12px 12px" : "0 16px 16px", display: "flex", gap: 8 }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); add({ id: p.id, name: p.name, nameAr: p.nameAr, price, image: p.image }); }}
+          style={{
+            flex: 1, border: "1px solid #2a2a3a", borderRadius: 8, padding: isMobile ? 6 : 8,
+            fontSize: 12, fontWeight: 500, color: "#ffffff", background: "transparent", cursor: "pointer",
+          }}
+        >
+          {s.addToCart}
+        </button>
+        <a
+          href={buildWhatsAppUrl(lang === "en"
+            ? `I'd like to order ${p.name} — ${price} EGP`
+            : `عايز أطلب ${p.nameAr} — ${price} EGP`)}
+          target="_blank"
+          rel="noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center",
+            borderRadius: 8, padding: "8px 12px",
+            color: "#000", background: "#c9a84c", textDecoration: "none",
+          }}
+        >
+          <MessageCircle size={16} />
+        </a>
       </div>
     </div>
   );
 }
 
-function AboutPage() {
+function ProductDetailPage({ product, navigate }: { product: Product; navigate: (p: Page) => void }) {
+  const { lang } = useLang();
+  const { add } = useCart();
+  const s = tx[lang];
+  const p = product;
+  const price = p.discount ? Math.round(p.price * 0.9) : p.price;
+  const bodyStyle = lang === "ar" ? { fontFamily: "'Tajawal', sans-serif", direction: "rtl" as const } : {};
+  const isMobile = useIsMobile();
+
   return (
-    <section style={{ borderTop: "1px solid rgba(42,42,58,.6)", borderBottom: "1px solid rgba(42,42,58,.6)", background: "rgba(17,17,24,.4)", padding: "64px 0" }}>
-      <div style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gap: 56, padding: "0 20px", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", alignItems: "center" }}>
-        <div style={{ borderRadius: 16, overflow: "hidden", border: "1px solid #2a2a3a", boxShadow: "0 4px 24px rgba(0,0,0,.4)" }}>
-          <img src={storeImg} alt="Store" loading="lazy" style={{ width: "100%", display: "block", objectFit: "cover" }} />
-        </div>
+    <section style={{ maxWidth: 1280, margin: "0 auto", padding: "100px 20px 64px" }}>
+      <button onClick={() => navigate("shop")} style={{
+        color: "#888899", background: "none", border: "none", cursor: "pointer", fontSize: 14, marginBottom: 32, display: "block",
+      }}>
+        {s.backToShop}
+      </button>
+      <div style={{
+        display: "grid", gap: 40, alignItems: "start",
+        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+      }}>
         <div>
-          <p style={{ fontFamily: "'Tajawal',sans-serif", marginTop: 24, fontSize: 22, lineHeight: 1.7, color: "#f5f0e8", direction: "rtl" }}>
-            نؤمن إن العطر <span style={{ color: "#c9a84c" }}>هواية وحب</span>، مش مجرد بيزنس.
-          </p>
-          <p style={{ fontFamily: "'Tajawal',sans-serif", marginTop: 16, fontSize: 15, lineHeight: 1.9, color: "#888899", direction: "rtl" }}>
-            من بنها، بنختار كل عطر بإيدنا. بنجربه، بنراجعه، وبنبيع اللي احنا مؤمنين بيه. مفيش انفلونسر كلام فاضي — بس صدق، شغف، ومجتمع بيحب العطر زينا.
-          </p>
-          <div style={{ marginTop: 32, display: "flex", flexWrap: "wrap", gap: 12 }}>
-            {[["100%","Original"],["8+","Curated brands"],["24/7","On WhatsApp"]].map(([n,l]) => (
-              <div key={l} style={{ borderRadius: 12, border: "1px solid #2a2a3a", background: "rgba(10,10,15,.6)", padding: "12px 20px" }}>
-                <div style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontSize: 22, color: "#c9a84c" }}>{n}</div>
-                <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".15em", color: "#888899" }}>{l}</div>
+          <img src={p.image} alt={p.name} style={{ width: "100%", borderRadius: 12, objectFit: "cover" }} />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, ...bodyStyle }}>
+          <div style={{ fontSize: 11, textTransform: "uppercase", color: "#888899" }}>{p.brand}</div>
+          <div style={{ fontSize: 32, fontWeight: 700, color: "#ffffff" }}>
+            {lang === "ar" ? p.nameAr : p.name}
+          </div>
+          <div style={{ fontSize: 24, color: "#c9a84c" }}>
+            {price} <span style={{ fontSize: 14 }}>EGP</span>
+            {p.discount && <span style={{ fontSize: 14, color: "#888899", textDecoration: "line-through", marginLeft: 12 }}>{p.price} EGP</span>}
+          </div>
+          <div style={{ fontSize: 14, color: "#888899" }}>
+            {lang === "ar" ? p.noteAr : p.note}
+          </div>
+          <div style={{ background: "#111118", border: "1px solid #2a2a3a", borderRadius: 8, padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ fontSize: 14, color: "#888899" }}><strong style={{ color: "#ffffff" }}>{s.topNote}:</strong> {p.notes.top}</div>
+            <div style={{ fontSize: 14, color: "#888899" }}><strong style={{ color: "#ffffff" }}>{s.heartNote}:</strong> {p.notes.heart}</div>
+            <div style={{ fontSize: 14, color: "#888899" }}><strong style={{ color: "#ffffff" }}>{s.baseNote}:</strong> {p.notes.base}</div>
+          </div>
+          <button
+            onClick={() => add({ id: p.id, name: p.name, nameAr: p.nameAr, price, image: p.image })}
+            style={{
+              width: "100%", border: "1px solid #2a2a3a", borderRadius: 8, padding: 12,
+              fontSize: 15, fontWeight: 500, color: "#ffffff", background: "transparent", cursor: "pointer",
+            }}
+          >
+            {s.addToCart}
+          </button>
+          <a
+            href={buildWhatsAppUrl(lang === "en"
+              ? `I'd like to order ${p.name} — ${price} EGP`
+              : `عايز أطلب ${p.nameAr} — ${price} EGP`)}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              width: "100%", display: "block", textAlign: "center",
+              background: "#c9a84c", color: "#000", borderRadius: 8, padding: 12,
+              fontSize: 15, fontWeight: 500, textDecoration: "none",
+            }}
+          >
+            <MessageCircle size={16} style={{ verticalAlign: "middle", marginRight: 8 }} />
+            {s.orderWhatsApp}
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AboutPage() {
+  const { lang } = useLang();
+  const s = tx[lang];
+  const bodyStyle = lang === "ar" ? { fontFamily: "'Tajawal', sans-serif", direction: "rtl" as const } : {};
+
+  return (
+    <section style={{ padding: "64px 20px" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+        <h2 style={{ fontWeight: 600, fontSize: 28, textAlign: "center", color: "#ffffff", margin: 0, ...bodyStyle }}>
+          {s.aboutHeading}
+        </h2>
+        <div style={{ marginTop: 40, display: "grid", gap: 40, gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", alignItems: "center" }}>
+          <div style={{ borderRadius: 12, overflow: "hidden" }}>
+            <img src={storeImg} alt="Store" loading="lazy" style={{ width: "100%", display: "block", objectFit: "cover" }} />
+          </div>
+          <div>
+            <p style={{ fontSize: 15, color: "#888899", lineHeight: 1.8, margin: 0, ...bodyStyle }}>
+              {s.aboutBody}
+            </p>
+            <div style={{ marginTop: 32, display: "flex", flexWrap: "wrap", gap: 12 }}>
+              <div style={{ border: "1px solid #2a2a3a", borderRadius: 8, padding: "12px 20px" }}>
+                <div style={{ fontSize: 22, fontWeight: 600, color: "#c9a84c" }}>100%</div>
+                <div style={{ fontSize: 11, color: "#888899" }}>{s.statOriginal}</div>
               </div>
-            ))}
+              <div style={{ border: "1px solid #2a2a3a", borderRadius: 8, padding: "12px 20px" }}>
+                <div style={{ fontSize: 22, fontWeight: 600, color: "#c9a84c" }}>8+</div>
+                <div style={{ fontSize: 11, color: "#888899" }}>{s.statBrands}</div>
+              </div>
+              <div style={{ border: "1px solid #2a2a3a", borderRadius: 8, padding: "12px 20px" }}>
+                <div style={{ fontSize: 22, fontWeight: 600, color: "#c9a84c" }}>24/7</div>
+                <div style={{ fontSize: 11, color: "#888899" }}>{s.statWhatsApp}</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -421,28 +557,37 @@ function AboutPage() {
 }
 
 function GuidePage() {
+  const { lang } = useLang();
+  const s = tx[lang];
+  const bodyStyle = lang === "ar" ? { fontFamily: "'Tajawal', sans-serif", direction: "rtl" as const } : {};
+  const productNames = PRODUCTS.reduce((acc: Record<string, string>, p) => {
+    acc[p.name] = lang === "ar" ? p.nameAr : p.name;
+    return acc;
+  }, {});
+
   const cards = [
-    { time: "Morning", timeAr: "الصبح", title: "Fresh & light", titleAr: "خفيف ومنعش", picks: ["Hawas Ice","Cerulean Blue"] },
-    { time: "Evening", timeAr: "بالليل", title: "Bold & warm", titleAr: "قوي ودافي", picks: ["Hawas Kobra","Afro Leather"] },
-    { time: "All Day", timeAr: "طول اليوم", title: "Signature scent", titleAr: "بصمتك الشخصية", picks: ["Megara","Kahilan"] },
+    { time: s.morning, sub: s.morningSub, picks: ["Hawas Ice", "Cerulean Blue"] },
+    { time: s.evening, sub: s.eveningSub, picks: ["Hawas Kobra", "Afro Leather"] },
+    { time: s.allDay, sub: s.allDaySub, picks: ["Megara", "Kahilan"] },
   ];
+
   return (
-    <section style={{ borderTop: "1px solid rgba(42,42,58,.6)", background: "rgba(17,17,24,.3)", padding: "64px 0" }}>
-      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 20px" }}>
-        <SectionHeader kicker="Guide" en="How to pick your perfume" ar="ازاي تختار عطرك؟" />
-        <div style={{ marginTop: 56, display: "grid", gap: 24, gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))" }}>
+    <section style={{ padding: "64px 20px" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+        <h2 style={{ fontWeight: 600, fontSize: 28, textAlign: "center", color: "#ffffff", margin: 0, ...bodyStyle }}>
+          {s.guideHeading}
+        </h2>
+        <div style={{ marginTop: 40, display: "grid", gap: 24, gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))" }}>
           {cards.map(c => (
-            <div key={c.time} style={{ borderRadius: 16, border: "1px solid #2a2a3a", background: "rgba(10,10,15,.6)", padding: 32 }}>
+            <div key={c.time} style={{ background: "#111118", border: "1px solid #2a2a3a", borderRadius: 12, padding: 32 }}>
               <Sparkles size={24} color="#c9a84c" />
-              <div style={{ marginTop: 24, display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                <div style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontSize: 28, color: "#f5f0e8" }}>{c.time}</div>
-                <div style={{ fontFamily: "'Tajawal',sans-serif", color: "#c9a84c" }}>{c.timeAr}</div>
-              </div>
-              <div style={{ marginTop: 8, fontSize: 13, color: "#888899" }}>{c.title} · <span style={{ fontFamily: "'Tajawal',sans-serif" }}>{c.titleAr}</span></div>
-              <div style={{ marginTop: 24, borderTop: "1px solid rgba(42,42,58,.6)", paddingTop: 24, display: "flex", flexDirection: "column", gap: 8 }}>
-                {c.picks.map(p => (
-                  <div key={p} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#f5f0e8" }}>
-                    <span style={{ width: 16, height: 2, background: "#c9a84c", flexShrink: 0 }} />{p}
+              <div style={{ marginTop: 24, fontSize: 24, fontWeight: 600, color: "#ffffff" }}>{c.time}</div>
+              <div style={{ marginTop: 8, fontSize: 13, color: "#888899" }}>{c.sub}</div>
+              <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 8 }}>
+                {c.picks.map(pk => (
+                  <div key={pk} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#ffffff" }}>
+                    <span style={{ width: 12, height: 2, background: "#c9a84c", flexShrink: 0 }} />
+                    {productNames[pk] || pk}
                   </div>
                 ))}
               </div>
@@ -454,38 +599,48 @@ function GuidePage() {
   );
 }
 
-interface FAQItem {
-  q: string;
-  a: string;
-  open: boolean;
-}
-
 function FAQPage() {
-  const faqs: Array<{ q: string; a: string }> = [
-    { q: "هل العطور المباعة أصلية؟", a: "نعم، جميع العطور المباعة أصلية 100%. نتعامل مباشرة مع الموردين الأصليين لضمان الأصالة." },
-    { q: "كيف أطلب العطر؟", a: "يمكنك طلبه عبر زر 'Order via WhatsApp' أو من خلال إضافته إلى السلة ثم الدفع عبر الواتساب." },
-    { q: "ما هي طرق الدفع؟", a: "الدفع يتم عبر الواتساب. يتم استلام المبلغ قبل الشحنة، ويتم توصيلها لك خلال 1-3 أيام عمل." },
-    { q: "هل يمكنني إلغاء الطلب؟", a: "نعم، يمكنك إلغاء الطلب خلال ساعة من تقديمه عبر الواتساب." },
-    { q: "كيف أتابع طلبي؟", a: "بعد تقديم الطلب، سيتواصل معك فريقنا عبر الواتساب لتأكيد التفاصيل ومتابعة الطلب." },
-    { q: "هل توصل إلى جميع أنحاء مصر؟", a: "نعم، نوصل إلى جميع أنحاء مصر، بما في ذلك بنها والقريبة." },
-  ];
+  const { lang } = useLang();
+  const s = tx[lang];
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const bodyStyle = lang === "ar" ? { fontFamily: "'Tajawal', sans-serif", direction: "rtl" as const } : {};
+
+  const faqs: Array<{ q: string; a: string }> = [
+    { q: s.q1, a: s.a1 },
+    { q: s.q2, a: s.a2 },
+    { q: s.q3, a: s.a3 },
+    { q: s.q4, a: s.a4 },
+    { q: s.q5, a: s.a5 },
+  ];
+
   return (
     <section style={{ maxWidth: 900, margin: "0 auto", padding: "64px 20px" }}>
-      <SectionHeader kicker="FAQ" en="Frequently Asked Questions" ar="الأسئلة الشائعة" />
-      <div style={{ marginTop: 56, display: "flex", flexDirection: "column", gap: 12 }}>
+      <h2 style={{ fontWeight: 600, fontSize: 28, textAlign: "center", color: "#ffffff", margin: 0, ...bodyStyle }}>
+        {s.faqHeading}
+      </h2>
+      <div style={{ marginTop: 40, display: "flex", flexDirection: "column", gap: 12 }}>
         {faqs.map((item, i) => (
-          <div key={i} style={{ border: "1px solid #2a2a3a", borderRadius: 12, background: "rgba(10,10,15,.4)" }}>
-            <button onClick={() => setOpenIndex(openIndex === i ? null : i)} style={{
-              width: "100%", padding: "16px 20px", display: "flex", justifyContent: "space-between",
-              alignItems: "center", fontSize: 16, color: "#f5f0e8", background: "none", border: "none",
-              cursor: "pointer", textAlign: "left", fontFamily: "'Cormorant Garamond',Georgia,serif",
-            }}>
+          <div key={i} style={{ background: "#111118", border: "1px solid #2a2a3a", borderRadius: 12 }}>
+            <button
+              onClick={() => setOpenIndex(openIndex === i ? null : i)}
+              style={{
+                width: "100%", padding: "16px 20px", display: "flex", justifyContent: "space-between",
+                alignItems: "center", fontSize: 15, fontWeight: 500, color: "#ffffff",
+                background: "transparent", border: "none", cursor: "pointer",
+                ...bodyStyle,
+              }}
+            >
               <span>{item.q}</span>
-              <ChevronDown size={20} style={{ transition: "transform 0.2s", transform: openIndex === i ? "rotate(180deg)" : "rotate(0deg)" }} />
+              <span style={{
+                color: "#c9a84c", transition: "transform 0.2s",
+                transform: openIndex === i ? "rotate(180deg)" : "rotate(0deg)",
+                display: "inline-block",
+              }}>
+                <ChevronDown size={16} />
+              </span>
             </button>
             {openIndex === i && (
-              <div style={{ padding: "0 20px 20px", fontSize: 15, color: "#888899", fontFamily: "'Tajawal',sans-serif", lineHeight: 1.8 }}>
+              <div style={{ padding: "0 20px 16px", fontSize: 14, color: "#888899", lineHeight: 1.8, ...bodyStyle }}>
                 {item.a}
               </div>
             )}
@@ -497,120 +652,74 @@ function FAQPage() {
 }
 
 function Footer({ navigate }: { navigate: (p: Page) => void }) {
-  const footerLinks = [
-    { name: "Shop", nameAr: "المتجر", page: "shop" as Page },
-    { name: "About", nameAr: "عنا", page: "about" as Page },
-    { name: "Guide", nameAr: "دليل", page: "guide" as Page },
-    { name: "FAQ", nameAr: "أسئلة", page: "faq" as Page },
+  const { lang } = useLang();
+  const s = tx[lang];
+  const bodyStyle = lang === "ar" ? { fontFamily: "'Tajawal', sans-serif", direction: "rtl" as const } : {};
+
+  const footerLinks: Array<{ label: string; page: Page }> = [
+    { label: s.home, page: "home" },
+    { label: s.shop, page: "shop" },
+    { label: s.about, page: "about" },
+    { label: s.guide, page: "guide" },
+    { label: s.faq, page: "faq" },
   ];
+
   return (
-    <footer style={{ borderTop: "1px solid #2a2a3a", background: "#0a0a0f", padding: "56px 0 24px" }}>
-      <div style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gap: 40, padding: "0 20px", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
+    <footer style={{ borderTop: "1px solid #2a2a3a", background: "#0a0a0f", padding: "48px 20px 24px" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gap: 40, gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
         <div>
-          <div style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontSize: 18, color: "#f5f0e8" }}>City Fragrance</div>
-          <div style={{ fontFamily: "'Tajawal',sans-serif", fontSize: 12, color: "#c9a84c" }}>سيتي فراجرانس</div>
-          <p style={{ marginTop: 16, fontSize: 13, color: "#888899" }}>Curated original perfumes from Banha, Egypt. Sold with love.</p>
-        </div>
-        <div style={{ fontFamily: "'Tajawal',sans-serif", direction: "rtl" }}>
-          <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".3em", color: "#c9a84c", marginBottom: 12 }}>العنوان</div>
-          <p style={{ fontSize: 13, color: "#f5f0e8", lineHeight: 1.8 }}>{ADDRESS_AR}<br />بنها — القليوبية، مصر</p>
+          <div style={{ fontWeight: 700, fontSize: 18, color: "#ffffff" }}>City Fragrance</div>
+          <p style={{ marginTop: 8, fontSize: 13, color: "#888899", ...bodyStyle }}>{s.footerTagline}</p>
         </div>
         <div>
-          <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".3em", color: "#c9a84c", marginBottom: 12 }}>Contact</div>
+          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "#888899", marginBottom: 12 }}>{s.footerContact}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <a href={INSTAGRAM} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#f5f0e8", textDecoration: "none" }}><InstagramIcon size={16} /> @city_fragrance_</a>
-            <a href={buildWhatsAppUrl("مرحبا 👋")} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#f5f0e8", textDecoration: "none" }}><MessageCircle size={16} /> WhatsApp</a>
+            <a href={INSTAGRAM} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#ffffff", textDecoration: "none" }}>
+              <InstagramIcon size={16} /> @city_fragrance_
+            </a>
+            <a href={buildWhatsAppUrl(lang === "en" ? "Hello 👋" : "السلام عليكم 👋")} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#ffffff", textDecoration: "none" }}>
+              <MessageCircle size={16} /> WhatsApp
+            </a>
           </div>
         </div>
-        <div style={{ fontFamily: "'Tajawal',sans-serif", direction: "rtl" }}>
-          <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".3em", color: "#c9a84c", marginBottom: 12 }}>الروابط</div>
+        <div>
+          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "#888899", marginBottom: 12 }}>{s.footerLinks}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {footerLinks.map(link => (
               <button key={link.page} onClick={() => navigate(link.page)} style={{
                 background: "none", border: "none", padding: 0, cursor: "pointer",
-                fontSize: 13, color: "#f5f0e8", textDecoration: "none", fontFamily: "'Tajawal',sans-serif",
-                textAlign: "right", width: "fit-content"
+                fontSize: 13, color: "#ffffff", textDecoration: "none", textAlign: "left", width: "fit-content",
               }}>
-                {link.nameAr}
+                {link.label}
               </button>
             ))}
           </div>
         </div>
       </div>
-      <div style={{ maxWidth: 1280, margin: "40px auto 0", borderTop: "1px solid rgba(42,42,58,.6)", padding: "24px 20px 0", textAlign: "center", fontSize: 12, color: "#888899" }}>City Fragrance © 2025 — All rights reserved</div>
+      <div style={{ borderTop: "1px solid #2a2a3a", paddingTop: 24, marginTop: 24, textAlign: "center", fontSize: 12, color: "#888899" }}>
+        {s.rights}
+      </div>
     </footer>
   );
 }
 
 function FloatingWA() {
+  const { lang } = useLang();
   return (
-    <a href={buildWhatsAppUrl("السلام عليكم 👋")} target="_blank" rel="noreferrer" style={{ position: "fixed", bottom: 24, right: 24, zIndex: 50, width: 56, height: 56, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "#25D366", color: "white", boxShadow: "0 0 30px rgba(37,211,102,.4)", textDecoration: "none" }}>
+    <a
+      href={buildWhatsAppUrl(lang === "en" ? "Hello 👋" : "السلام عليكم 👋")}
+      target="_blank"
+      rel="noreferrer"
+      style={{
+        position: "fixed", bottom: 24, zIndex: 50,
+        right: lang === "ar" ? undefined : 24,
+        left: lang === "ar" ? 24 : undefined,
+        width: 52, height: 52, borderRadius: "50%",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        background: "#25D366", color: "white", textDecoration: "none",
+      }}
+    >
       <MessageCircle size={24} />
     </a>
-  );
-}
-
-function CartSheet({ trigger }: { trigger: React.ReactNode }) {
-  const { items, remove, setQty, total, clear } = useCart();
-  const [open, setOpen] = useState(false);
-  const waUrl = buildWhatsAppUrl(cartToWhatsAppMessage(items, total));
-  return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>{trigger}</SheetTrigger>
-      <SheetContent side="right" style={{ width: "100%", maxWidth: 440, background: "#111118", borderLeft: "1px solid #2a2a3a", color: "#f5f0e8", display: "flex", flexDirection: "column" }}>
-        <SheetHeader>
-          <SheetTitle style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontSize: 24, color: "#f5f0e8" }}>Your Cart</SheetTitle>
-        </SheetHeader>
-        {items.length === 0 ? (
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, textAlign: "center", color: "#888899" }}>
-            <ShoppingBag size={40} style={{ color: "rgba(201,168,76,.6)" }} />
-            <p>Cart is empty</p>
-            <p style={{ fontFamily: "'Tajawal',sans-serif", fontSize: 13 }}>السلة فاضية</p>
-          </div>
-        ) : (
-          <>
-            <div style={{ flex: 1, overflowY: "auto", padding: "8px 0", display: "flex", flexDirection: "column", gap: 12 }}>
-              {items.map(i => (
-                <div key={i.id} style={{ display: "flex", gap: 12, borderRadius: 12, border: "1px solid #2a2a3a", background: "rgba(10,10,15,.4)", padding: 12 }}>
-                  <img src={i.image} alt="" style={{ width: 80, height: 80, borderRadius: 8, objectFit: "cover" }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", color: "#f5f0e8" }}>{i.name}</div>
-                    <div style={{ fontFamily: "'Tajawal',sans-serif", fontSize: 11, color: "#c9a84c" }}>{i.nameAr}</div>
-                    <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
-                      <button onClick={() => setQty(i.id, i.qty - 1)} style={{ border: "1px solid #2a2a3a", borderRadius: 4, padding: 4, background: "transparent", cursor: "pointer", color: "#f5f0e8" }}><Minus size={12} /></button>
-                      <span style={{ width: 24, textAlign: "center", fontSize: 13 }}>{i.qty}</span>
-                      <button onClick={() => setQty(i.id, i.qty + 1)} style={{ border: "1px solid #2a2a3a", borderRadius: 4, padding: 4, background: "transparent", cursor: "pointer", color: "#f5f0e8" }}><Plus size={12} /></button>
-                      <div style={{ marginLeft: "auto", fontSize: 13, color: "#c9a84c" }}>{i.price * i.qty} EGP</div>
-                    </div>
-                  </div>
-                  <button onClick={() => remove(i.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#888899", alignSelf: "flex-start" }}><Trash2 size={16} /></button>
-                </div>
-              ))}
-            </div>
-            <div style={{ borderTop: "1px solid #2a2a3a", paddingTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".15em", color: "#888899" }}>Total</span>
-                <span style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontSize: 20, color: "#c9a84c" }}>{total} EGP</span>
-              </div>
-              <a href={waUrl} target="_blank" rel="noreferrer" onClick={() => setOpen(false)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 999, padding: "12px", fontWeight: 600, color: "#0a0a0f", background: "linear-gradient(135deg,#c9a84c,#e8cc80,#c9a84c)", textDecoration: "none" }}>
-                <MessageCircle size={16} /> Checkout on WhatsApp
-              </a>
-              <button onClick={clear} style={{ fontSize: 12, color: "#888899", background: "none", border: "none", cursor: "pointer" }}>Clear cart</button>
-            </div>
-          </>
-        )}
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-function SectionHeader({ kicker, en, ar }: { kicker: string; en: string; ar: string }) {
-  return (
-    <div style={{ textAlign: "center" }}>
-      <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".4em", color: "#c9a84c" }}>{kicker}</div>
-      <h2 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", marginTop: 12, fontSize: "clamp(2rem,4vw,3rem)", color: "#f5f0e8" }}>{en}</h2>
-      <div style={{ fontFamily: "'Tajawal',sans-serif", marginTop: 8, fontSize: 20, color: "#c9a84c", direction: "rtl" }}>{ar}</div>
-      <div style={{ margin: "24px auto 0", width: 64, height: 1, background: "rgba(201,168,76,.6)" }} />
-    </div>
   );
 }

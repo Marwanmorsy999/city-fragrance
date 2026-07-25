@@ -68,14 +68,31 @@ export function buildWhatsAppUrl(message: string) {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 }
 
-export function cartToWhatsAppMessage(items: CartItem[], total: number) {
+export function cartToWhatsAppMessage(items: CartItem[], total: number, lang: "en" | "ar") {
+  if (lang === "en") {
+    const lines = [
+      "Hello 👋",
+      "I'd like to place an order from City Fragrance:",
+      "",
+      ...items.map((i) => `🛍️ ${i.name} (x${i.qty}) — ${i.price * i.qty} EGP`),
+      "",
+      `💰 Total: ${total} EGP`,
+      "",
+      "📦 Please send me the shipping details.",
+      "Thank you 🙏",
+    ];
+    return lines.join("\n");
+  }
   const lines = [
     "السلام عليكم 👋",
-    "حابب أعمل أوردر من City Fragrance:",
+    "عايز أعمل أوردر من City Fragrance:",
     "",
-    ...items.map((i, idx) => `${idx + 1}. ${i.nameAr} (${i.name}) × ${i.qty} — ${i.price * i.qty} EGP`),
+    ...items.map((i) => `🛍️ ${i.nameAr} (x${i.qty}) — ${i.price * i.qty} EGP`),
     "",
-    `الإجمالي: ${total} EGP`,
+    `💰 الإجمالي: ${total} EGP`,
+    "",
+    "📦 ممكن تبعتلي تفاصيل الشحن؟",
+    "شكراً 🙏",
   ];
   return lines.join("\n");
 }
