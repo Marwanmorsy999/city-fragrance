@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { MapPin, MessageCircle, ShoppingBag, Trash2, Plus, Minus, Sparkles, Menu, X } from "lucide-react";
+import { MapPin, MessageCircle, ShoppingBag, Trash2, Plus, Minus, Sparkles, Menu, X, ChevronDown } from "lucide-react";
 
 function InstagramIcon({ size = 16 }: { size?: number }) {
   return (
@@ -29,40 +29,71 @@ function useIsMobile() {
 const ADDRESS_AR = "بنها الفلل، شارع الحرمين، أمام صيدلية العماوي";
 const INSTAGRAM = "https://instagram.com/city_fragrance_";
 
+type Page = "home" | "shop" | "about" | "guide" | "faq";
+
 export default function App() {
+  const [page, setPage] = useState<Page>("home");
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const on = () => setScrolled(window.scrollY > 20);
+    on();
+    window.addEventListener("scroll", on, { passive: true });
+    return () => window.removeEventListener("scroll", on);
+  }, []);
+
+  const navigate = (newPage: Page) => {
+    setPage(newPage);
+    window.scrollTo(0, 0);
+  };
+
   return (
     <CartProvider>
-      <Page />
+      <div style={{ minHeight: "100vh", overflowX: "hidden", background: "#0a0a0f", color: "#f5f0e8" }}>
+        <Nav navigate={navigate} currentPage={page} scrolled={scrolled} />
+        {page === "home" && <HomePage navigate={navigate} />}
+        {page === "shop" && <ShopPage />}
+        {page === "about" && <AboutPage />}
+        {page === "guide" && <GuidePage />}
+        {page === "faq" && <FAQPage />}
+        <Footer navigate={navigate} />
+        <FloatingWA />
+      </div>
     </CartProvider>
   );
 }
 
-function Page() {
-  return (
-    <div style={{ minHeight: "100vh", overflowX: "hidden", background: "#0a0a0f", color: "#f5f0e8" }}>
-      <Nav />
-      <Hero />
-      <Shop />
-      <About />
-      <OrderWA />
-      <Guide />
-      <Footer />
-      <FloatingWA />
-    </div>
-  );
-}
-
-function Nav() {
+function Nav({ navigate, currentPage, scrolled }: { navigate: (p: Page) => void; currentPage: Page; scrolled: boolean }) {
   const { count } = useCart();
-  const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const isMobile = useIsMobile();
-  const navLinks = [["#shop","Shop"],["#about","About"],["#guide","Guide"],["#contact","Contact"]];
-  useEffect(() => {
-    const on = () => setScrolled(window.scrollY > 20);
-    on(); window.addEventListener("scroll", on, { passive: true });
-    return () => window.removeEventListener("scroll", on);
-  }, []);
+  const navLinks: Array<[Page, string, string]> = [
+    ["shop", "Shop", "المتجر"],
+    ["about", "About", "عنا"],
+    ["guide", "Guide", "دليل"],
+    ["faq", "FAQ", "الأسئلة الشائعة"],
+  ];
+
+  const ContactLink = () => (
+    <a
+      href={buildWhatsAppUrl("مرحبا 👋")}
+      target="_blank"
+      rel="noreferrer"
+      style={{
+        display: isMobile ? "flex" : "flex",
+        alignItems: "center",
+        gap: 8,
+        fontSize: 14,
+        color: "#888899",
+        textDecoration: "none",
+        cursor: "pointer",
+      }}
+    >
+      <MessageCircle size={16} />
+      <span>{isMobile ? "Contact" : "اتصل"}</span>
+    </a>
+  );
+
   return (
     <header style={{
       position: "fixed", top: 0, left: 0, right: 0, zIndex: 40, transition: "all 0.3s",
@@ -78,11 +109,25 @@ function Nav() {
           </div>
         </a>
         <nav style={{ display: isMobile ? "none" : "flex", alignItems: "center", gap: 32, fontSize: 14 }}>
-          {navLinks.map(([h,l]) => (
-            <a key={h} href={h} style={{ color: "#888899", textDecoration: "none", transition: "color 0.2s" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "#c9a84c")}
-              onMouseLeave={e => (e.currentTarget.style.color = "#888899")}>{l}</a>
+          {navLinks.map(([p, l, lAr]) => (
+            <button
+              key={p}
+              onClick={() => navigate(p)}
+              style={{
+                color: currentPage === p ? "#c9a84c" : "#888899",
+                textDecoration: "none",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                fontSize: 14,
+                transition: "color 0.2s",
+              }}
+            >
+              {isMobile ? lAr : l}
+            </button>
           ))}
+          <ContactLink />
         </nav>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <CartSheet trigger={
@@ -119,25 +164,42 @@ function Nav() {
           background: "rgba(10,10,15,0.97)", backdropFilter: "blur(16px)",
           display: "flex", flexDirection: "column", padding: "8px 20px", gap: 4,
         }}>
-          {navLinks.map(([h,l]) => (
-            <a key={h} href={h} onClick={() => setMenuOpen(false)}
+          {navLinks.map(([p, l, lAr]) => (
+            <button
+              key={p}
+              onClick={() => { setMenuOpen(false); navigate(p); }}
               style={{
                 display: "flex", alignItems: "center", minHeight: 48, padding: "12px 16px",
                 fontSize: 16, color: "#f5f0e8", textDecoration: "none", borderRadius: 12,
                 transition: "background 0.2s", fontFamily: "'Cormorant Garamond', Georgia, serif",
+                background: currentPage === p ? "rgba(201,168,76,0.1)" : "transparent",
               }}
               onMouseEnter={e => (e.currentTarget.style.background = "rgba(201,168,76,0.1)")}
-              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-              {l}
-            </a>
+              onMouseLeave={e => (e.currentTarget.style.background = currentPage === p ? "rgba(201,168,76,0.1)" : "transparent")}
+            >
+              {lAr}
+            </button>
           ))}
+          <button
+            onClick={() => { setMenuOpen(false); }}
+            style={{
+              display: "flex", alignItems: "center", minHeight: 48, padding: "12px 16px",
+              fontSize: 16, color: "#f5f0e8", textDecoration: "none", borderRadius: 12,
+              fontFamily: "'Cormorant Garamond', Georgia, serif",
+            }}
+          >
+            <a href={buildWhatsAppUrl("مرحبا 👋")} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", width: "100%" }}>
+              <MessageCircle size={16} />
+              <span>اتصل</span>
+            </a>
+          </button>
         </div>
       )}
     </header>
   );
 }
 
-function Hero() {
+function Hero({ navigate }: { navigate: (p: Page) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const on = () => {
@@ -169,11 +231,11 @@ function Hero() {
           مش بيبع عطر.. بيبيع <span style={{ color: "#c9a84c" }}>قلب العطر</span>
         </p>
         <div style={{ marginTop: 40, display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center", justifyContent: "center" }}>
-          <a href="#shop" style={{ display: "inline-flex", alignItems: "center", gap: 12, borderRadius: 999, padding: "14px 32px", fontSize: 15, fontWeight: 600, color: "#0a0a0f", textDecoration: "none", background: "linear-gradient(135deg,#c9a84c,#e8cc80,#c9a84c)", boxShadow: "0 0 30px rgba(201,168,76,.3)" }}>
+          <button onClick={() => navigate("shop")} style={{ display: "inline-flex", alignItems: "center", gap: 12, borderRadius: 999, padding: "14px 32px", fontSize: 15, fontWeight: 600, color: "#0a0a0f", textDecoration: "none", background: "linear-gradient(135deg,#c9a84c,#e8cc80,#c9a84c)", boxShadow: "0 0 30px rgba(201,168,76,.3)" }}>
             <span style={{ fontFamily: "'Tajawal',sans-serif" }}>اعمل اوردرك دلوقتي</span>
             <span style={{ width: 1, height: 16, background: "rgba(10,10,15,.3)" }} />
             <span>Shop Now</span>
-          </a>
+          </button>
           <a href={buildWhatsAppUrl("مساء الخير 👋 حابب اسأل عن العطور المتاحة")} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, borderRadius: 999, border: "1px solid rgba(245,240,232,.3)", padding: "12px 24px", fontSize: 14, color: "#f5f0e8", textDecoration: "none" }}>
             <MessageCircle size={16} /> WhatsApp
           </a>
@@ -183,12 +245,83 @@ function Hero() {
   );
 }
 
-function Shop() {
+function FeaturedProducts({ navigate }: { navigate: (p: Page) => void }) {
+  const featured = PRODUCTS.slice(0, 4);
+  const isMobile = useIsMobile();
+  return (
+    <section style={{ maxWidth: 1280, margin: "0 auto", padding: "64px 20px" }}>
+      <SectionHeader kicker="Featured" en="Featured Collection" ar="مجموعة مختارة" />
+      <div style={{ marginTop: 56, display: "grid", gap: isMobile ? 12 : 24, gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)" }}>
+        {featured.map((p, i) => <ProductCard key={p.id} p={p} index={i} />)}
+      </div>
+      <div style={{ marginTop: 40, textAlign: "center" }}>
+        <button onClick={() => navigate("shop")} style={{
+          display: "inline-flex", alignItems: "center", gap: 8,
+          borderRadius: 999, border: "1px solid rgba(201,168,76,.4)",
+          padding: "10px 24px", fontSize: 14, color: "#c9a84c",
+          background: "transparent", cursor: "pointer", transition: "all 0.2s"
+        }}>
+          View All →
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function AuthenticitySection() {
+  return (
+    <section style={{ maxWidth: 1280, margin: "0 auto", padding: "64px 20px", textAlign: "center" }}>
+      <SectionHeader kicker="Authenticity" en="Guaranteed Original" ar="أصل أصلي" />
+      <p style={{ fontFamily: "'Tajawal',sans-serif", marginTop: 24, fontSize: 18, color: "#888899", maxWidth: 600, margin: "24px auto 0" }}>
+        كل العطور المباعة أصلية وموثوقة. نحن نتعامل مباشرة مع الموردين الأصليين لضمان الأصالة والجودة.
+      </p>
+    </section>
+  );
+}
+
+function HomePage({ navigate }: { navigate: (p: Page) => void }) {
+  return (
+    <>
+      <Hero navigate={navigate} />
+      <FeaturedProducts navigate={navigate} />
+      <AuthenticitySection />
+      <OrderWASection />
+    </>
+  );
+}
+
+function OrderWASection() {
+  return (
+    <section style={{ maxWidth: 900, margin: "0 auto", padding: "64px 20px", textAlign: "center" }}>
+      <SectionHeader kicker="Order" en="Two Ways to Order" ar="طريقتين للطلب" />
+      <div style={{ marginTop: 48, display: "grid", gap: 24, gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))" }}>
+        <a href={buildWhatsAppUrl("السلام عليكم 👋 حابب أعمل أوردر")} target="_blank" rel="noreferrer" style={{ display: "block", borderRadius: 24, padding: 40, textAlign: "center", background: "linear-gradient(135deg,#c9a84c,#e8cc80,#c9a84c)", color: "#0a0a0f", textDecoration: "none", boxShadow: "0 0 30px rgba(201,168,76,.3)" }}>
+          <MessageCircle size={40} style={{ margin: "0 auto" }} />
+          <h3 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", marginTop: 16, fontSize: 26 }}>Order via WhatsApp</h3>
+          <p style={{ fontFamily: "'Tajawal',sans-serif", marginTop: 8, fontSize: 16, fontWeight: 600 }}>اطلب الآن عبر الواتساب</p>
+          <p style={{ marginTop: 12, fontSize: 13, opacity: .85 }}>Fastest • Personal • 24/7</p>
+        </a>
+        <button onClick={() => window.scrollTo(0, 0)} style={{
+          display: "block", borderRadius: 24, border: "1px solid #2a2a3a", padding: 40,
+          textAlign: "center", background: "#111118", textDecoration: "none",
+          cursor: "pointer", fontFamily: "'Cormorant Garamond',Georgia,serif",
+        }}>
+          <ShoppingBag size={40} style={{ margin: "0 auto", color: "#c9a84c" }} />
+          <h3 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", marginTop: 16, fontSize: 26, color: "#f5f0e8" }}>Order on the site</h3>
+          <p style={{ fontFamily: "'Tajawal',sans-serif", marginTop: 8, fontSize: 16, color: "#c9a84c" }}>أو اعمل اوردر عن طريق الويبسايت</p>
+          <p style={{ marginTop: 12, fontSize: 13, color: "#888899" }}>Browse • Add to cart • Checkout on WhatsApp</p>
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function ShopPage() {
   const [filter, setFilter] = useState<Category | "all">("all");
   const isMobile = useIsMobile();
   const list = useMemo(() => filter === "all" ? PRODUCTS : PRODUCTS.filter(p => p.categories.includes(filter)), [filter]);
   return (
-    <section id="shop" style={{ maxWidth: 1280, margin: "0 auto", padding: "64px 20px" }}>
+    <section style={{ maxWidth: 1280, margin: "0 auto", padding: "64px 20px" }}>
       <SectionHeader kicker="Collection" en="Featured Fragrances" ar="أبرز العطور" />
       <div style={{ marginTop: 40, display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8 }}>
         {FILTERS.map(f => (
@@ -259,9 +392,9 @@ function ProductCard({ p, index }: { p: Product; index: number }) {
   );
 }
 
-function About() {
+function AboutPage() {
   return (
-    <section id="about" style={{ borderTop: "1px solid rgba(42,42,58,.6)", borderBottom: "1px solid rgba(42,42,58,.6)", background: "rgba(17,17,24,.4)", padding: "64px 0" }}>
+    <section style={{ borderTop: "1px solid rgba(42,42,58,.6)", borderBottom: "1px solid rgba(42,42,58,.6)", background: "rgba(17,17,24,.4)", padding: "64px 0" }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gap: 56, padding: "0 20px", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", alignItems: "center" }}>
         <div style={{ borderRadius: 16, overflow: "hidden", border: "1px solid #2a2a3a", boxShadow: "0 4px 24px rgba(0,0,0,.4)" }}>
           <img src={storeImg} alt="Store" loading="lazy" style={{ width: "100%", display: "block", objectFit: "cover" }} />
@@ -287,36 +420,14 @@ function About() {
   );
 }
 
-function OrderWA() {
-  return (
-    <section id="contact" style={{ maxWidth: 900, margin: "0 auto", padding: "64px 20px", textAlign: "center" }}>
-      <SectionHeader kicker="Order" en="Two Ways to Order" ar="طريقتين للطلب" />
-      <div style={{ marginTop: 48, display: "grid", gap: 24, gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))" }}>
-        <a href={buildWhatsAppUrl("السلام عليكم 👋 حابب أعمل أوردر")} target="_blank" rel="noreferrer" style={{ display: "block", borderRadius: 24, padding: 40, textAlign: "center", background: "linear-gradient(135deg,#c9a84c,#e8cc80,#c9a84c)", color: "#0a0a0f", textDecoration: "none", boxShadow: "0 0 30px rgba(201,168,76,.3)" }}>
-          <MessageCircle size={40} style={{ margin: "0 auto" }} />
-          <h3 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", marginTop: 16, fontSize: 26 }}>Order via WhatsApp</h3>
-          <p style={{ fontFamily: "'Tajawal',sans-serif", marginTop: 8, fontSize: 16, fontWeight: 600 }}>اطلب الآن عبر الواتساب</p>
-          <p style={{ marginTop: 12, fontSize: 13, opacity: .85 }}>Fastest • Personal • 24/7</p>
-        </a>
-        <a href="#shop" style={{ display: "block", borderRadius: 24, border: "1px solid #2a2a3a", padding: 40, textAlign: "center", background: "#111118", textDecoration: "none" }}>
-          <ShoppingBag size={40} style={{ margin: "0 auto", color: "#c9a84c" }} />
-          <h3 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", marginTop: 16, fontSize: 26, color: "#f5f0e8" }}>Order on the site</h3>
-          <p style={{ fontFamily: "'Tajawal',sans-serif", marginTop: 8, fontSize: 16, color: "#c9a84c" }}>أو اعمل اوردر عن طريق الويبسايت</p>
-          <p style={{ marginTop: 12, fontSize: 13, color: "#888899" }}>Browse • Add to cart • Checkout on WhatsApp</p>
-        </a>
-      </div>
-    </section>
-  );
-}
-
-function Guide() {
+function GuidePage() {
   const cards = [
     { time: "Morning", timeAr: "الصبح", title: "Fresh & light", titleAr: "خفيف ومنعش", picks: ["Hawas Ice","Cerulean Blue"] },
     { time: "Evening", timeAr: "بالليل", title: "Bold & warm", titleAr: "قوي ودافي", picks: ["Hawas Kobra","Afro Leather"] },
     { time: "All Day", timeAr: "طول اليوم", title: "Signature scent", titleAr: "بصمتك الشخصية", picks: ["Megara","Kahilan"] },
   ];
   return (
-    <section id="guide" style={{ borderTop: "1px solid rgba(42,42,58,.6)", background: "rgba(17,17,24,.3)", padding: "64px 0" }}>
+    <section style={{ borderTop: "1px solid rgba(42,42,58,.6)", background: "rgba(17,17,24,.3)", padding: "64px 0" }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 20px" }}>
         <SectionHeader kicker="Guide" en="How to pick your perfume" ar="ازاي تختار عطرك؟" />
         <div style={{ marginTop: 56, display: "grid", gap: 24, gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))" }}>
@@ -343,7 +454,55 @@ function Guide() {
   );
 }
 
-function Footer() {
+interface FAQItem {
+  q: string;
+  a: string;
+  open: boolean;
+}
+
+function FAQPage() {
+  const faqs: Array<{ q: string; a: string }> = [
+    { q: "هل العطور المباعة أصلية؟", a: "نعم، جميع العطور المباعة أصلية 100%. نتعامل مباشرة مع الموردين الأصليين لضمان الأصالة." },
+    { q: "كيف أطلب العطر؟", a: "يمكنك طلبه عبر زر 'Order via WhatsApp' أو من خلال إضافته إلى السلة ثم الدفع عبر الواتساب." },
+    { q: "ما هي طرق الدفع؟", a: "الدفع يتم عبر الواتساب. يتم استلام المبلغ قبل الشحنة، ويتم توصيلها لك خلال 1-3 أيام عمل." },
+    { q: "هل يمكنني إلغاء الطلب؟", a: "نعم، يمكنك إلغاء الطلب خلال ساعة من تقديمه عبر الواتساب." },
+    { q: "كيف أتابع طلبي؟", a: "بعد تقديم الطلب، سيتواصل معك فريقنا عبر الواتساب لتأكيد التفاصيل ومتابعة الطلب." },
+    { q: "هل توصل إلى جميع أنحاء مصر؟", a: "نعم، نوصل إلى جميع أنحاء مصر، بما في ذلك بنها والقريبة." },
+  ];
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  return (
+    <section style={{ maxWidth: 900, margin: "0 auto", padding: "64px 20px" }}>
+      <SectionHeader kicker="FAQ" en="Frequently Asked Questions" ar="الأسئلة الشائعة" />
+      <div style={{ marginTop: 56, display: "flex", flexDirection: "column", gap: 12 }}>
+        {faqs.map((item, i) => (
+          <div key={i} style={{ border: "1px solid #2a2a3a", borderRadius: 12, background: "rgba(10,10,15,.4)" }}>
+            <button onClick={() => setOpenIndex(openIndex === i ? null : i)} style={{
+              width: "100%", padding: "16px 20px", display: "flex", justifyContent: "space-between",
+              alignItems: "center", fontSize: 16, color: "#f5f0e8", background: "none", border: "none",
+              cursor: "pointer", textAlign: "left", fontFamily: "'Cormorant Garamond',Georgia,serif",
+            }}>
+              <span>{item.q}</span>
+              <ChevronDown size={20} style={{ transition: "transform 0.2s", transform: openIndex === i ? "rotate(180deg)" : "rotate(0deg)" }} />
+            </button>
+            {openIndex === i && (
+              <div style={{ padding: "0 20px 20px", fontSize: 15, color: "#888899", fontFamily: "'Tajawal',sans-serif", lineHeight: 1.8 }}>
+                {item.a}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Footer({ navigate }: { navigate: (p: Page) => void }) {
+  const footerLinks = [
+    { name: "Shop", nameAr: "المتجر", page: "shop" as Page },
+    { name: "About", nameAr: "عنا", page: "about" as Page },
+    { name: "Guide", nameAr: "دليل", page: "guide" as Page },
+    { name: "FAQ", nameAr: "أسئلة", page: "faq" as Page },
+  ];
   return (
     <footer style={{ borderTop: "1px solid #2a2a3a", background: "#0a0a0f", padding: "56px 0 24px" }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gap: 40, padding: "0 20px", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
@@ -361,6 +520,20 @@ function Footer() {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <a href={INSTAGRAM} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#f5f0e8", textDecoration: "none" }}><InstagramIcon size={16} /> @city_fragrance_</a>
             <a href={buildWhatsAppUrl("مرحبا 👋")} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#f5f0e8", textDecoration: "none" }}><MessageCircle size={16} /> WhatsApp</a>
+          </div>
+        </div>
+        <div style={{ fontFamily: "'Tajawal',sans-serif", direction: "rtl" }}>
+          <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".3em", color: "#c9a84c", marginBottom: 12 }}>الروابط</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {footerLinks.map(link => (
+              <button key={link.page} onClick={() => navigate(link.page)} style={{
+                background: "none", border: "none", padding: 0, cursor: "pointer",
+                fontSize: 13, color: "#f5f0e8", textDecoration: "none", fontFamily: "'Tajawal',sans-serif",
+                textAlign: "right", width: "fit-content"
+              }}>
+                {link.nameAr}
+              </button>
+            ))}
           </div>
         </div>
       </div>
