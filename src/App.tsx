@@ -235,6 +235,20 @@ function ProductCard({ p, index }: { p: Product; index: number }) {
           </div>
         </div>
         <p style={{ fontSize: 12, color: "#888899" }}>{p.note}</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 10, color: "#888899" }}>
+            <span style={{ width: 36, fontFamily: "'Tajawal',sans-serif", direction: "rtl", textAlign: "right" }}>أعلى</span>
+            <span style={{ flex: 1 }}>{p.notes.top}</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 10, color: "#888899" }}>
+            <span style={{ width: 36, fontFamily: "'Tajawal',sans-serif", direction: "rtl", textAlign: "right" }}>قلب</span>
+            <span style={{ flex: 1 }}>{p.notes.heart}</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 10, color: "#888899" }}>
+            <span style={{ width: 36, fontFamily: "'Tajawal',sans-serif", direction: "rtl", textAlign: "right" }}>قاعدة</span>
+            <span style={{ flex: 1 }}>{p.notes.base}</span>
+          </div>
+        </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => add({ id: p.id, name: p.name, nameAr: p.nameAr, price, image: p.image })} style={{ flex: 1, borderRadius: 999, border: "1px solid rgba(201,168,76,.4)", padding: "8px", fontSize: 12, fontWeight: 500, color: "#f5f0e8", background: "transparent", cursor: "pointer", transition: "all 0.2s" }}>Add to Cart</button>
           <a href={buildWhatsAppUrl(`عايز أطلب ${p.nameAr} (${p.name}) — ${price} EGP`)} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 999, padding: "8px 12px", color: "#0a0a0f", background: "linear-gradient(135deg,#c9a84c,#e8cc80,#c9a84c)", textDecoration: "none" }}>
