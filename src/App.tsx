@@ -16,6 +16,16 @@ import { PRODUCTS, FILTERS, type Category, type Product } from "@/lib/products";
 import { CartProvider, useCart, buildWhatsAppUrl, cartToWhatsAppMessage } from "@/lib/cart";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
+function useIsMobile() {
+  const [mobile, setMobile] = useState(window.innerWidth <= 768);
+  useEffect(() => {
+    const on = () => setMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
+  return mobile;
+}
+
 const ADDRESS_AR = "بنها الفلل، شارع الحرمين، أمام صيدلية العماوي";
 const INSTAGRAM = "https://instagram.com/city_fragrance_";
 
@@ -46,20 +56,13 @@ function Nav() {
   const { count } = useCart();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
+  const navLinks = [["#shop","Shop"],["#about","About"],["#guide","Guide"],["#contact","Contact"]];
   useEffect(() => {
     const on = () => setScrolled(window.scrollY > 20);
     on(); window.addEventListener("scroll", on, { passive: true });
     return () => window.removeEventListener("scroll", on);
   }, []);
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 768px)");
-    const onChange = () => setIsMobile(mq.matches);
-    onChange();
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-  const navLinks = [["#shop","Shop"],["#about","About"],["#guide","Guide"],["#contact","Contact"]];
   return (
     <header style={{
       position: "fixed", top: 0, left: 0, right: 0, zIndex: 40, transition: "all 0.3s",
@@ -74,7 +77,6 @@ function Nav() {
             <div style={{ fontFamily: "'Tajawal', sans-serif", fontSize: 11, color: "#c9a84c", letterSpacing: "0.1em", direction: "rtl" }}>سيتي فراجرانس</div>
           </div>
         </a>
-        {/* Desktop nav */}
         <nav style={{ display: isMobile ? "none" : "flex", alignItems: "center", gap: 32, fontSize: 14 }}>
           {navLinks.map(([h,l]) => (
             <a key={h} href={h} style={{ color: "#888899", textDecoration: "none", transition: "color 0.2s" }}
@@ -100,33 +102,29 @@ function Nav() {
               )}
             </button>
           } />
-          {/* Hamburger button — visible only on mobile */}
-          <button onClick={() => setMenuOpen(o => !o)} aria-label="Toggle menu" style={{
-            display: isMobile ? "flex" : "none",
-            alignItems: "center", justifyContent: "center",
-            background: "none", border: "none", cursor: "pointer",
-            color: "#f5f0e8", padding: 4,
-          }}>
-            {menuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          {isMobile && (
+            <button onClick={() => setMenuOpen(o => !o)} aria-label="Toggle menu" style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "none", border: "none", cursor: "pointer",
+              color: "#f5f0e8", padding: 4,
+            }}>
+              {menuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          )}
         </div>
       </div>
-      {/* Mobile menu overlay */}
-      {menuOpen && (
+      {isMobile && menuOpen && (
         <div style={{
-          position: "fixed", top: 64, left: 0, right: 0, bottom: 0, zIndex: 39,
+          position: "absolute", top: "100%", left: 0, right: 0, zIndex: 39,
           background: "rgba(10,10,15,0.97)", backdropFilter: "blur(16px)",
-          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start",
-          paddingTop: 48, gap: 8,
+          display: "flex", flexDirection: "column", padding: "8px 20px", gap: 4,
         }}>
           {navLinks.map(([h,l]) => (
             <a key={h} href={h} onClick={() => setMenuOpen(false)}
               style={{
-                display: "block", width: "100%", maxWidth: 300,
-                padding: "16px 24px", fontSize: 18, textAlign: "center",
-                color: "#f5f0e8", textDecoration: "none", borderRadius: 12,
-                transition: "background 0.2s",
-                fontFamily: "'Cormorant Garamond', Georgia, serif",
+                display: "flex", alignItems: "center", minHeight: 48, padding: "12px 16px",
+                fontSize: 16, color: "#f5f0e8", textDecoration: "none", borderRadius: 12,
+                transition: "background 0.2s", fontFamily: "'Cormorant Garamond', Georgia, serif",
               }}
               onMouseEnter={e => (e.currentTarget.style.background = "rgba(201,168,76,0.1)")}
               onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
@@ -151,7 +149,7 @@ function Hero() {
     return () => window.removeEventListener("scroll", on);
   }, []);
   return (
-    <section id="top" style={{ position: "relative", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "#050508" }}>
+    <section id="top" style={{ position: "relative", minHeight: "100vh", maxHeight: "700px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "#050508" }}>
       <div ref={ref} style={{ position: "absolute", inset: 0, willChange: "transform" }}>
         <img src={heroImg} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.55 }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom,rgba(10,10,15,.6),rgba(10,10,15,.3),#0a0a0f)" }} />
@@ -181,16 +179,16 @@ function Hero() {
           </a>
         </div>
       </div>
-      <div style={{ position: "absolute", bottom: 32, left: "50%", transform: "translateX(-50%)", fontSize: 11, letterSpacing: "0.3em", textTransform: "uppercase", color: "#888899" }}>Scroll ↓</div>
     </section>
   );
 }
 
 function Shop() {
   const [filter, setFilter] = useState<Category | "all">("all");
+  const isMobile = useIsMobile();
   const list = useMemo(() => filter === "all" ? PRODUCTS : PRODUCTS.filter(p => p.categories.includes(filter)), [filter]);
   return (
-    <section id="shop" style={{ maxWidth: 1280, margin: "0 auto", padding: "96px 20px" }}>
+    <section id="shop" style={{ maxWidth: 1280, margin: "0 auto", padding: "64px 20px" }}>
       <SectionHeader kicker="Collection" en="Featured Fragrances" ar="أبرز العطور" />
       <div style={{ marginTop: 40, display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8 }}>
         {FILTERS.map(f => (
@@ -199,7 +197,7 @@ function Shop() {
           </button>
         ))}
       </div>
-      <div style={{ marginTop: 56, display: "grid", gap: 24, gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))" }}>
+      <div style={{ marginTop: 56, display: "grid", gap: isMobile ? 12 : 24, gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)" }}>
         {list.map((p, i) => <ProductCard key={p.id} p={p} index={i} />)}
       </div>
     </section>
@@ -210,6 +208,7 @@ function ProductCard({ p, index }: { p: Product; index: number }) {
   const { add } = useCart();
   const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
   useEffect(() => {
     if (!ref.current) return;
     const io = new IntersectionObserver(([e]) => e.isIntersecting && setVisible(true), { threshold: .15 });
@@ -219,39 +218,39 @@ function ProductCard({ p, index }: { p: Product; index: number }) {
   return (
     <div ref={ref} style={{ position: "relative", overflow: "hidden", borderRadius: 16, border: "1px solid #2a2a3a", background: "#111118", boxShadow: "0 4px 24px rgba(0,0,0,.4)", transition: "all 0.7s", transitionDelay: `${(index%4)*80}ms`, transform: visible?"translateY(0)":"translateY(24px)", opacity: visible?1:0 }}>
       {p.discount && <div style={{ position: "absolute", top: 12, right: 12, zIndex: 10, borderRadius: 999, padding: "4px 10px", fontSize: 11, fontWeight: 600, color: "#0a0a0f", background: "linear-gradient(135deg,#c9a84c,#e8cc80,#c9a84c)" }}>−10% OFF</div>}
-      <div style={{ aspectRatio: "4/5", overflow: "hidden" }}>
+      <div style={{ aspectRatio: "3/4", overflow: "hidden" }}>
         <img src={p.image} alt={p.name} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
       </div>
-      <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ padding: isMobile ? 12 : 20, display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <div>
-            <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".15em", color: "#888899" }}>{p.brand}</div>
-            <h3 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontSize: 20, color: "#f5f0e8" }}>{p.name}</h3>
-            <div style={{ fontFamily: "'Tajawal',sans-serif", fontSize: 13, color: "rgba(201,168,76,.9)", direction: "rtl" }}>{p.nameAr}</div>
+            <div style={{ fontSize: isMobile ? 9 : 10, textTransform: "uppercase", letterSpacing: ".15em", color: "#888899" }}>{p.brand}</div>
+            <h3 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontSize: isMobile ? 16 : 20, color: "#f5f0e8" }}>{p.name}</h3>
+            <div style={{ fontFamily: "'Tajawal',sans-serif", fontSize: isMobile ? 11 : 13, color: "rgba(201,168,76,.9)", direction: "rtl" }}>{p.nameAr}</div>
           </div>
           <div style={{ textAlign: "right", flexShrink: 0 }}>
             {p.discount && <div style={{ fontSize: 11, color: "#888899", textDecoration: "line-through" }}>{p.price} EGP</div>}
-            <div style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontSize: 18, color: "#c9a84c" }}>{price} <span style={{ fontSize: 11 }}>EGP</span></div>
+            <div style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontSize: isMobile ? 15 : 18, color: "#c9a84c" }}>{price} <span style={{ fontSize: 11 }}>EGP</span></div>
           </div>
         </div>
-        <p style={{ fontSize: 12, color: "#888899" }}>{p.note}</p>
+        <p style={{ fontSize: isMobile ? 9 : 12, color: "#888899" }}>{p.note}</p>
         <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 10, color: "#888899" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: isMobile ? 9 : 10, color: "#888899" }}>
             <span style={{ width: 36, fontFamily: "'Tajawal',sans-serif", direction: "rtl", textAlign: "right" }}>أعلى</span>
             <span style={{ flex: 1 }}>{p.notes.top}</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 10, color: "#888899" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: isMobile ? 9 : 10, color: "#888899" }}>
             <span style={{ width: 36, fontFamily: "'Tajawal',sans-serif", direction: "rtl", textAlign: "right" }}>قلب</span>
             <span style={{ flex: 1 }}>{p.notes.heart}</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 10, color: "#888899" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: isMobile ? 9 : 10, color: "#888899" }}>
             <span style={{ width: 36, fontFamily: "'Tajawal',sans-serif", direction: "rtl", textAlign: "right" }}>قاعدة</span>
             <span style={{ flex: 1 }}>{p.notes.base}</span>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => add({ id: p.id, name: p.name, nameAr: p.nameAr, price, image: p.image })} style={{ flex: 1, borderRadius: 999, border: "1px solid rgba(201,168,76,.4)", padding: "8px", fontSize: 12, fontWeight: 500, color: "#f5f0e8", background: "transparent", cursor: "pointer", transition: "all 0.2s" }}>Add to Cart</button>
-          <a href={buildWhatsAppUrl(`عايز أطلب ${p.nameAr} (${p.name}) — ${price} EGP`)} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 999, padding: "8px 12px", color: "#0a0a0f", background: "linear-gradient(135deg,#c9a84c,#e8cc80,#c9a84c)", textDecoration: "none" }}>
+          <button onClick={() => add({ id: p.id, name: p.name, nameAr: p.nameAr, price, image: p.image })} style={{ flex: 1, borderRadius: 999, border: "1px solid rgba(201,168,76,.4)", padding: isMobile ? 6 : 8, fontSize: 12, fontWeight: 500, color: "#f5f0e8", background: "transparent", cursor: "pointer", transition: "all 0.2s" }}>Add to Cart</button>
+          <a href={buildWhatsAppUrl(`عايز أطلب ${p.nameAr} (${p.name}) — ${price} EGP`)} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 999, padding: isMobile ? 6 : 8, color: "#0a0a0f", background: "linear-gradient(135deg,#c9a84c,#e8cc80,#c9a84c)", textDecoration: "none" }}>
             <MessageCircle size={16} />
           </a>
         </div>
@@ -262,16 +261,12 @@ function ProductCard({ p, index }: { p: Product; index: number }) {
 
 function About() {
   return (
-    <section id="about" style={{ borderTop: "1px solid rgba(42,42,58,.6)", borderBottom: "1px solid rgba(42,42,58,.6)", background: "rgba(17,17,24,.4)", padding: "96px 0" }}>
+    <section id="about" style={{ borderTop: "1px solid rgba(42,42,58,.6)", borderBottom: "1px solid rgba(42,42,58,.6)", background: "rgba(17,17,24,.4)", padding: "64px 0" }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gap: 56, padding: "0 20px", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", alignItems: "center" }}>
         <div style={{ borderRadius: 16, overflow: "hidden", border: "1px solid #2a2a3a", boxShadow: "0 4px 24px rgba(0,0,0,.4)" }}>
           <img src={storeImg} alt="Store" loading="lazy" style={{ width: "100%", display: "block", objectFit: "cover" }} />
         </div>
         <div>
-          <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".3em", color: "#c9a84c", marginBottom: 12 }}>Our Story</div>
-          <h2 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontSize: "clamp(2rem,4vw,3rem)", color: "#f5f0e8", lineHeight: 1.1 }}>
-            Fragrance is <em style={{ color: "#c9a84c" }}>passion</em>, not profit.
-          </h2>
           <p style={{ fontFamily: "'Tajawal',sans-serif", marginTop: 24, fontSize: 22, lineHeight: 1.7, color: "#f5f0e8", direction: "rtl" }}>
             نؤمن إن العطر <span style={{ color: "#c9a84c" }}>هواية وحب</span>، مش مجرد بيزنس.
           </p>
@@ -294,7 +289,7 @@ function About() {
 
 function OrderWA() {
   return (
-    <section id="contact" style={{ maxWidth: 900, margin: "0 auto", padding: "96px 20px", textAlign: "center" }}>
+    <section id="contact" style={{ maxWidth: 900, margin: "0 auto", padding: "64px 20px", textAlign: "center" }}>
       <SectionHeader kicker="Order" en="Two Ways to Order" ar="طريقتين للطلب" />
       <div style={{ marginTop: 48, display: "grid", gap: 24, gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))" }}>
         <a href={buildWhatsAppUrl("السلام عليكم 👋 حابب أعمل أوردر")} target="_blank" rel="noreferrer" style={{ display: "block", borderRadius: 24, padding: 40, textAlign: "center", background: "linear-gradient(135deg,#c9a84c,#e8cc80,#c9a84c)", color: "#0a0a0f", textDecoration: "none", boxShadow: "0 0 30px rgba(201,168,76,.3)" }}>
@@ -321,7 +316,7 @@ function Guide() {
     { time: "All Day", timeAr: "طول اليوم", title: "Signature scent", titleAr: "بصمتك الشخصية", picks: ["Megara","Kahilan"] },
   ];
   return (
-    <section id="guide" style={{ borderTop: "1px solid rgba(42,42,58,.6)", background: "rgba(17,17,24,.3)", padding: "96px 0" }}>
+    <section id="guide" style={{ borderTop: "1px solid rgba(42,42,58,.6)", background: "rgba(17,17,24,.3)", padding: "64px 0" }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 20px" }}>
         <SectionHeader kicker="Guide" en="How to pick your perfume" ar="ازاي تختار عطرك؟" />
         <div style={{ marginTop: 56, display: "grid", gap: 24, gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))" }}>
